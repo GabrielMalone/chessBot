@@ -13,10 +13,6 @@ import java.util.Set;
 import com.stephengware.java.games.chess.state.*;
 
 
-
-
-
-
 //---------------------------------------------------------------------------------------------------------------------
 public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
@@ -45,9 +41,9 @@ public class MyBot extends Bot {
 		double optimumUtilityBlack = Double.POSITIVE_INFINITY;
 		State optimumState = null;
 		double optimumUtility = 0;
+
 		for (State c : childStates) {													    // iterate the child states
 			Result r = evaluateState(c);													    // result of evaluation
-			if (r.state.check && r.state.over) return r; 									   // if check mate take it
 			if (playerIsWhite(root) 
 				&& r.utility > optimumUtilityWhite){				   // looking to maximize score (white perspective)
 				optimumUtilityWhite = r.utility;	
@@ -58,62 +54,92 @@ public class MyBot extends Bot {
 				optimumUtilityBlack = r.utility;
 				optimumState = r.state;
 			}
-		} 						
+		} 				
+
 		if (playerIsWhite(root)) {
 			optimumUtility = optimumUtilityWhite; 					
 		} else {
 			optimumUtility = optimumUtilityBlack;
-		}															  // if nothing stands out, just pick a random move
+		}	
+																  // if nothing stands out, just pick a random move
 		if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
 		return new Result(optimumState, optimumUtility);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
-
-		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
-		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
-
-		double utilityScore = whiteMaterialValue - blackMaterialvalue; 					    // from white's perspective
-
-		// System.out.printf("\nwhite value: %f\n", whiteMaterialValue); 						 	  // check validity
-		// System.out.printf("black value: %f\n", blackMaterialvalue); 							 	  // check validity
-
+		
+		double utilityScore = materialValueForPlayer(root);
+		
 		if (isCheckMate(root) && playerIsBlack(root)){								// White just went,so black checked
-			utilityScore += 100;	
+			utilityScore += 1000;	
 			return new Result(root, utilityScore); 								// checkmate, no need to go any further
 		}
 		if (isCheckMate(root) && playerIsWhite(root)){								// Black just went,so white checked
-			utilityScore -= 100;	
+			utilityScore -= 1000;	
 			return new Result(root, utilityScore); 
 		}
 		if (isStaleMate(root) && playerIsBlack(root)){										  // white causes stalemate
-			// if losing, take the stalemate
-			if (utilityScore < 0) utilityScore += 100;
-			else 				  utilityScore -= 100;	 
+			if (utilityScore < 0) utilityScore += 500;								   // if losing, take the stalemate
+			else 				  utilityScore -= 500;	 
 			return new Result(root, utilityScore); 								// try to just avoid sttalemate for now
 		}
 		if (isStaleMate(root) && playerIsWhite(root)){												 // Black just went
-			// if losing, take the stalemate
-			if (utilityScore > 0) utilityScore -= 100;
-			else 				  utilityScore += 100;	 
+			if (utilityScore > 0) utilityScore -= 500;								   // if losing, take the stalemate
+			else 				  utilityScore += 500;	 
 			return new Result(root, utilityScore); 							    // try to just avoid sttalemate for now
 		}
-		if (isCheck(root) && playerIsWhite(root)){
-			utilityScore -= 5;
+		if (isCheck(root) && playerIsWhite(root)){									    // black has put white in check
+			utilityScore -= 50;
 		}
-		if (isCheck(root) && playerIsBlack(root)){
-			utilityScore += 5;
+		if (isCheck(root) && playerIsBlack(root)){										// white has put black in check
+			utilityScore += 50;
 		}
 		return new Result(root, utilityScore);                   
 	}
-	// private double pieceModificationTable(){
-
-	// }
 	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<State> getChildStates(State root){ 						   // GET NEXT POSSIBLE GAME STATES
+	private double pawnPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 1;
+		for (Piece p : pieces){
+			if (isPawn(p) && player.equals("WHITE")){
+				val *= (p.rank - 1);							   // white pawn more valuable as it moves up the board
+			}
+			if (isPawn(p) && player.equals("BLACK")){
+				val *= (8 - p.rank);						     // black pawn more valuable as it moves down the board
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double materialValueForPlayer(State root){
+		//-------------------------------------------------------------------------------------------------------------
+		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
+		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
+		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
+		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
+		whiteMaterialValue += pawnPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
+		blackMaterialvalue += pawnPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+
+		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
+	}
+
+	//-----------------------------------------------------------------------------------------------------------------
+	private ArrayList<Piece> getPieceOjbects(State root, String player){      // iterate the board to get all the actual piece objects 
+		//-------------------------------------------------------------------------------------------------------------
+		ArrayList<Piece> boardPieces = new ArrayList<>();
+		for (int i = 0 ; i < 8 ; i ++){
+			for (int j = 0 ; j < 8 ; j ++){
+				Piece p = root.board.getPieceAt(i, j);
+				if (p != null && p.player.name().equals(player)) {
+					boardPieces.add(p);
+				}
+			}
+		}
+		return boardPieces;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private ArrayList<State> getChildStates(State root){ 						       // GET NEXT POSSIBLE GAME STATES
 		//-------------------------------------------------------------------------------------------------------------
 		Set<State> visitedStates = new HashSet<>();  
 		ArrayList<State> children = new ArrayList<>();	     // This list will hold all the children nodes of the root.
@@ -204,7 +230,7 @@ public class MyBot extends Bot {
 		this.pieceValues.put("King", 0);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private static final class Result {
+	private static final class Result { 						  // so we can associate a state with its utility score
 		//-------------------------------------------------------------------------------------------------------------
 		public State state;
 		public double utility;
