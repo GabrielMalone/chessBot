@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.HashSet;
 import java.util.Set;
-
 import com.stephengware.java.games.chess.state.*;
 
 
@@ -21,8 +20,7 @@ import com.stephengware.java.games.chess.state.*;
 //---------------------------------------------------------------------------------------------------------------------
 public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
-	private State curGame;
-	private Random random = new Random();
+	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 
@@ -36,56 +34,80 @@ public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		this.curGame = root;
 		initPieceValues();
 		return greedy(root).state;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result greedy(State root){ 															   // Greedy bot method
 		//-------------------------------------------------------------------------------------------------------------
-		ArrayList<State> childrenStates = getChildStates(root);
-		System.out.printf("child states: %d", childrenStates.size());
+		ArrayList<State> childStates = getChildStates(root);
 		double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
 		double optimumUtilityBlack = Double.POSITIVE_INFINITY;
 		State optimumState = null;
 		double optimumUtility = 0;
-		for (State c : childrenStates) {
-			Result r = evaluateState(c);
+		for (State c : childStates) {													    // iterate the child states
+			Result r = evaluateState(c);													    // result of evaluation
 			if (r.state.check && r.state.over) return r; 									   // if check mate take it
-			if (this.curGame.player.name().equals("WHITE") 
-				&& r.utility >= optimumUtilityWhite){
+			if (playerIsWhite(root) 
+				&& r.utility > optimumUtilityWhite){				   // looking to maximize score (white perspective)
 				optimumUtilityWhite = r.utility;	
 				optimumState = r.state;
 			}
-			if (this.curGame.player.name().equals("BLACK") 
-				&& r.utility <= optimumUtilityBlack){
-				System.out.printf("\nutility score: %f\n", r.utility);
+			if (playerIsBlack(root) 
+				&& r.utility < optimumUtilityBlack){			        // looking to minimze score (black perspective)
 				optimumUtilityBlack = r.utility;
 				optimumState = r.state;
 			}
 		} 						
-
-		if (this.curGame.player.name().equals("WHITE")) {
-			optimumUtility = optimumUtilityWhite;
+		if (playerIsWhite(root)) {
+			optimumUtility = optimumUtilityWhite; 					
 		} else {
 			optimumUtility = optimumUtilityBlack;
-		}
-
+		}															  // if nothing stands out, just pick a random move
+		if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
 		return new Result(optimumState, optimumUtility);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");
+		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
+		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
 
-		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);
-		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);
+		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
+		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
 
-		System.out.printf("\nwhite value: %f\n", whiteMaterialValue); // check validity
-		System.out.printf("black value: %f\n", blackMaterialvalue); // check validity
+		double utilityScore = whiteMaterialValue - blackMaterialvalue; 					    // from white's perspective
 
-		return new Result(root, whiteMaterialValue - blackMaterialvalue);
+		// System.out.printf("\nwhite value: %f\n", whiteMaterialValue); 						 	  // check validity
+		// System.out.printf("black value: %f\n", blackMaterialvalue); 							 	  // check validity
+
+		if (isCheckMate(root) && playerIsBlack(root)){								// White just went,so black checked
+			utilityScore += 100;	
+			return new Result(root, utilityScore); 								// checkmate, no need to go any further
+		}
+		if (isCheckMate(root) && playerIsWhite(root)){								// Black just went,so white checked
+			utilityScore -= 100;	
+			return new Result(root, utilityScore); 
+		}
+		if (isStaleMate(root) && playerIsBlack(root)){										  // white causes stalemate
+			// if losing, take the stalemate
+			if (utilityScore < 0) utilityScore += 100;
+			else 				  utilityScore -= 100;	 
+			return new Result(root, utilityScore); 								// try to just avoid sttalemate for now
+		}
+		if (isStaleMate(root) && playerIsWhite(root)){												 // Black just went
+			// if losing, take the stalemate
+			if (utilityScore > 0) utilityScore -= 100;
+			else 				  utilityScore += 100;	 
+			return new Result(root, utilityScore); 							    // try to just avoid sttalemate for now
+		}
+		if (isCheck(root) && playerIsWhite(root)){
+			utilityScore -= 5;
+		}
+		if (isCheck(root) && playerIsBlack(root)){
+			utilityScore += 5;
+		}
+		return new Result(root, utilityScore);                   
 	}
 	// private double pieceModificationTable(){
 
@@ -156,12 +178,21 @@ public class MyBot extends Bot {
 		return piece.getClass() == King.class;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	// private boolean isCheckMate(State root){
-	// 	return root.over && root.check;
-	// }
-	// private boolean isStaleMate(State root){
-	// 	return root.over && !root.check;
-	// }
+	private boolean isCheckMate(State root){
+		return root.over && root.check;
+	}
+	private boolean isStaleMate(State root){
+		return root.over && !root.check;
+	}
+	private boolean isCheck(State root){
+		return root.check && !root.over;
+	}
+	private boolean playerIsWhite(State root){
+		return root.player.name().equals("WHITE");
+	}
+	private boolean playerIsBlack(State root){
+		return root.player.name().equals("BLACK");
+	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
 		//-------------------------------------------------------------------------------------------------------------
