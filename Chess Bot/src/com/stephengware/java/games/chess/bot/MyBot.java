@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------------------------
-// GABRIEL MALONE / CSCI 4524 / LAB 1 / FALL 2025
+// GABRIEL MALONE / CSCI 4525 / LAB 1 / FALL 2025
 //---------------------------------------------------------------------------------------------------------------------
 
 package com.stephengware.java.games.chess.bot;
@@ -14,16 +14,15 @@ import java.util.Set;
 import com.stephengware.java.games.chess.state.*;
 
 
-// as it is now, my bot is greedy, it will find the highest value piece it can take, and take it. otherwise, random
 
-// work on making evaluate states recurssive 
+
+
 
 //---------------------------------------------------------------------------------------------------------------------
 public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
-	
-	private Random random = new Random();															  // class lvl vars
 	private State curGame;
+	private Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 
@@ -33,99 +32,33 @@ public class MyBot extends Bot {
 		super("gmalone1");    																			 // name my bot
 	}
 
+	//-----------------------------------------------------------------------------------------------------------------
+	private static final class Result {
+		//-------------------------------------------------------------------------------------------------------------
+		public State state;
+		public double maxBlackPieceThatCanBeTaken;
+		public double maxWhitePieceThatCanBeTaken;
+		public double utility;
 
-
-	// private Result minimax(State root, int depth, boolean maximizingPlayer) {
-	// 	if (depth == 0 || root.over) return evaluateState(root);
-		
-	// 	ArrayList<State> childrenStates = getChildrenStates(root); 
-
-	// 	if (maximizingPlayer) {
-	// 		Result maxResult = evaluateState(root);
-	// 		for (State child : childrenStates) {  
-	// 			Result result = minimax(child, depth - 1, false);
-	// 			if (result.utility > maxResult.utility) {
-	// 				maxResult.utility = result.utility;
-	// 				maxResult.state = result.state;
-	// 			}
-	// 		}
-	// 		return maxResult;
-	// 	}
-
-	// 	else {
-	// 		Result minResult = evaluateState(root);
-	// 		for (State child : childrenStates) {
-	// 			Result result = minimax(child, depth - 1, true);
-	// 			if (result.utility < minResult.utility) {
-	// 				minResult.utility = result.utility;
-	// 				minResult.state = result.state;
-	// 			}
-	// 		}
-	// 		return minResult;
-	// 	}
-
-	// }
+		public Result(State state, double maxWhitePieceThatCanBeTaken, double maxBlackPieceThatCanBeTaken) {
+			this.state = state;
+			this.maxWhitePieceThatCanBeTaken = maxWhitePieceThatCanBeTaken;
+			this.maxBlackPieceThatCanBeTaken = maxBlackPieceThatCanBeTaken;
+			this.utility = maxWhitePieceThatCanBeTaken - maxBlackPieceThatCanBeTaken;
+		}
+	}
 
 
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		curGame = root;
+		this.curGame = root;
 		initPieceValues();
-		return evaluateStates(getChildrenStates(root)).state;
-		// return minimax(root, 2, true).state;
+		return greedy(root).state;
 	}
-
-	// //-----------------------------------------------------------------------------------------------------------------
-	// private Result evaluateState(State root) {
-	// 	//-------------------------------------------------------------------------------------------------------------
-	// 	int maxVal = 0;
-	// 	HashMap<String, Integer> oppPieces = getPieces(root.board, whoIam());
-	// 	MyBot.Result result = new MyBot.Result(root, maxVal);
-
-	// 	if (isCheckMate(root)) {											      		  // if check available take it
-	// 		result.utility = 1000;
-	// 		return result;
-	// 	}
-	// 	if (root.check) {
-	// 		result.utility = 500;
-	// 		return result;
-	// 	};  									  				  					
-	// 	HashMap<String, Integer> OppPiecesInChildState = getPieces(root.board, whoIam());
-	// 	if (ableToTakePiece(oppPieces, OppPiecesInChildState)) {   	       // if state results in fewer pieces on board
-	// 		int childStateMaxVal = maxPieceValueOfState(oppPieces, OppPiecesInChildState);   	  // find most val take
-	// 		if (childStateMaxVal > maxVal){ 					  	  // track overall most valuable take in all states
-	// 			maxVal = childStateMaxVal;
-	// 			result.utility = maxVal;										
-	// 		}
-	// 	}				
-	// 	return result;
-	// }
-
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean ableToTakePiece(HashMap<String, Integer> initSate, HashMap<String, Integer> childState){
-		//-------------------------------------------------------------------------------------------------------------
-		for (String p : this.chessPieces) {
-			if (initSate.get(p) != childState.get(p)) return true;
-		}
-		return false;
-	}
-
-	//-----------------------------------------------------------------------------------------------------------------
-	private int maxPieceValueOfState(HashMap<String, Integer> initSate, HashMap<String, Integer> childState){
-		//-------------------------------------------------------------------------------------------------------------
-		int max = 0;
-		for (String p : this.chessPieces) {
-			if (initSate.get(p) != childState.get(p) && this.pieceValues.get(p) > max){
-				max = this.pieceValues.get(p);
-			}
-		}
-		return max;
-	}
-
-	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<State> getChildrenStates(State root){ 						   // GET NEXT POSSIBLE GAME STATES
+	private ArrayList<State> getChildStates(State root){ 						   // GET NEXT POSSIBLE GAME STATES
 		//-------------------------------------------------------------------------------------------------------------
 		Set<State> visitedStates = new HashSet<>();  
 		ArrayList<State> children = new ArrayList<>();	     // This list will hold all the children nodes of the root.
@@ -142,24 +75,24 @@ public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private HashMap<String, Integer> getPieces(Board board, String playerName){				    // TRACK PLAYERS PIECES
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> OppBoardPieces = new HashMap<>();						   // track pieces on the board 
-		for (String p : this.chessPieces) OppBoardPieces.put(p,0); 			   // init map with values set to 0
-		Iterator<Piece> piece_iterator = board.iterator();
+		HashMap<String, Integer> pieces = new HashMap<>();						   		   // track pieces on the board 
+		for (String p : this.chessPieces) pieces.put(p,0); 			         
+		Iterator<Piece> piece_iterator = board.iterator();	  						   // init map with values set to 0
 
 		while(piece_iterator.hasNext())
 		{
 			Piece curPeice = piece_iterator.next();
-			if (!curPeice.player.name().equals(playerName)) {    // iterate opp's pieces and add up pieces on the board
-				if (isPawn(curPeice)) 	OppBoardPieces.put("Pawn", 	OppBoardPieces.get("Pawn")   + 1);
-				if (isKnight(curPeice)) OppBoardPieces.put("Knight",OppBoardPieces.get("Knight") + 1);
-				if (isRook(curPeice)) 	OppBoardPieces.put("Rook", 	OppBoardPieces.get("Rook")   + 1);
-				if (isBishop(curPeice)) OppBoardPieces.put("Bishop",OppBoardPieces.get("Bishop") + 1);
-				if (isQueen(curPeice)) 	OppBoardPieces.put("Queen", OppBoardPieces.get("Queen")  + 1);
-				if (isKing(curPeice)) 	OppBoardPieces.put("King", 	OppBoardPieces.get("King") 	 + 1);
+			String playerMoving = curPeice.player.name();
+			if (playerMoving.equals(playerName)) {               // iterate opp's pieces and add up pieces on the board
+				if (isPawn(curPeice)) 	pieces.put("Pawn", 	pieces.get("Pawn")   + 1);
+				if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
+				if (isRook(curPeice)) 	pieces.put("Rook", 	pieces.get("Rook")   + 1);
+				if (isBishop(curPeice)) pieces.put("Bishop",pieces.get("Bishop") + 1);
+				if (isQueen(curPeice)) 	pieces.put("Queen", pieces.get("Queen")  + 1);
+				if (isKing(curPeice)) 	pieces.put("King", 	pieces.get("King") 	 + 1);
 			}
 		}
-
-		return OppBoardPieces;
+		return pieces;
 	}
 
 	//-----------------------------------------------------------------------------------------------------------------			
@@ -182,18 +115,12 @@ public class MyBot extends Bot {
 		return piece.getClass() == King.class;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean isCheckMate(State root){
-		return root.over && root.check;
-	}
+	// private boolean isCheckMate(State root){
+	// 	return root.over && root.check;
+	// }
 	// private boolean isStaleMate(State root){
 	// 	return root.over && !root.check;
 	// }
-	//-----------------------------------------------------------------------------------------------------------------
-	private String whoIam(){ 																				// WHO AM I 
-		//-------------------------------------------------------------------------------------------------------------
-		return this.curGame.player.name();
-	}
-
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
 		//-------------------------------------------------------------------------------------------------------------
@@ -205,52 +132,58 @@ public class MyBot extends Bot {
 		this.pieceValues.put("King", 100);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private static final class Result {
-
-		public State state;
-		public int utility;
-
-		public Result(State state, int utility) {
-			this.state = state;
-			this.utility = utility;
-		}
-
-	}
-	//-----------------------------------------------------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------------------------------------------------
-	private Result evaluateStates(ArrayList<State> childrenStates){ 						     // EVALUATE EACH STATE
+	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
-		int maxVal = 0;
-		State initalState = childrenStates.get(0);
-		HashMap<String, Integer> oppPieces = getPieces(initalState.board, whoIam());
-		MyBot.Result result = new MyBot.Result(initalState, maxVal);
+		HashMap<String, Integer> prevWhitePeices = getPieces(root.previous.board, "WHITE");
+		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");
+		HashMap<String, Integer> prevBlackPeices = getPieces(root.previous.board, "BLACK");
+		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");
+			  
+		double maxWhitePieceThatCanBeTaken = maxPieceValueOfState(prevWhitePeices, curWhitePeices) ;
+		double maxBlackPieceThatCanBeTaken = maxPieceValueOfState(prevBlackPeices, curBlackPeices) ; 
 
-		for (State childState : childrenStates) {
-			if (isCheckMate(childState)) {											      // if check available take it
-				result.state = childState;
-				result.utility = 1000;
-				return result;
-			}
-			if (childState.check) {
-				result.state = childState;
-				result.utility = 500;
-				return result;
-			};  									  				  					
-			HashMap<String, Integer> OppPiecesInChildState = getPieces(childState.board, whoIam());
-			if (ableToTakePiece(oppPieces, OppPiecesInChildState)) {   	   // if state results in fewer pieces on board
-				int childStateMaxVal = maxPieceValueOfState(oppPieces, OppPiecesInChildState);    // find most val take
-				if (childStateMaxVal > maxVal){ 					  // track overall most valuable take in all states
-					maxVal = childStateMaxVal;
-					result.state = childState;
-					result.utility = maxVal;										
-				}
-			}				
-		}
-		if (maxVal > 0) return result;
-		else {
-			result.state = childrenStates.get(random.nextInt(childrenStates.size()));   // no good options, pick random
-			return result;
-		}
+		return new Result(root, maxWhitePieceThatCanBeTaken, maxBlackPieceThatCanBeTaken);
 	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double maxPieceValueOfState(HashMap<String, Integer> initSate, HashMap<String, Integer> childState){
+		//-------------------------------------------------------------------------------------------------------------
+		double max = 0;
+		for (String p : this.chessPieces) {
+			if (initSate.get(p) != childState.get(p) && this.pieceValues.get(p) > max){   // if piece taken, see if mvp
+				max = this.pieceValues.get(p);
+			}
+		}
+		return max;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private Result greedy(State root){ 															   // Greedy bot method
+		//-------------------------------------------------------------------------------------------------------------
+		ArrayList<State> childrenStates = getChildStates(root);
+		Result optimalResult = evaluateState(childrenStates.get(0));            // set base choice to first child 
+		for (State c : childrenStates) {
+			Result r = evaluateState(c);
+			if (r.state.check && r.state.over) return r; 									   // if check mate take it
+			if (r.state.check) return r; 													       // if check, take it
+			if (this.curGame.player.name().equals("WHITE") 
+				&& r.maxBlackPieceThatCanBeTaken > optimalResult.maxBlackPieceThatCanBeTaken){
+				System.out.printf("I am the white player and choosing the highest black peice that can be taken: %f\n",
+					 r.maxBlackPieceThatCanBeTaken);
+				optimalResult = r;
+			}
+			if (this.curGame.player.name().equals("BLACK") 
+				&& r.maxWhitePieceThatCanBeTaken > optimalResult.maxWhitePieceThatCanBeTaken){
+				System.out.printf("I am the black player and choosing the highest white peice that can be taken: %f\n", 
+					r.maxWhitePieceThatCanBeTaken);
+				optimalResult = r;
+			}
+		} 																
+		return optimalResult;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	// private Result minimax(State root, int depth, boolean maximizingPlayer) {
+	// 	if (root.over || depth == 0) return evaluateState(root);
+	// 	ArrayList<State> childStates = getChildStates(root);
+	// }
+	//-----------------------------------------------------------------------------------------------------------------
 }
+

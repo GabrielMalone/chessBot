@@ -26,15 +26,15 @@ public class Test {
 	public static void main(String[] args) throws IOException {
 		Piece.load();
 		Bot[] bots = new Bot[]{
-				// new RandomBot(),
-				new MyBot(),
 				// new Human(),
-				new GreedyBot(),
+				// new GreedyBot(),
+				new MyBot(),
+				new RandomBot(),
 				// new NoviceBot(),
 				// new BeginnerBot(),
 				//new IntermediateBot(),
 		};
-		Tournament tournament = new Tournament(50, bots);
+		Tournament tournament = new Tournament(10, bots);
 		tournament.play();
 		ChessDisplay.getInstance().console.append(tournament.toString());
 	}
