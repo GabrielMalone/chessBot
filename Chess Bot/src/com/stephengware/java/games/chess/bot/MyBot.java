@@ -15,6 +15,7 @@ import com.stephengware.java.games.chess.state.*;
 
 //---------------------------------------------------------------------------------------------------------------------
 public class MyBot extends Bot {
+
 	//-----------------------------------------------------------------------------------------------------------------
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
@@ -82,12 +83,12 @@ public class MyBot extends Bot {
 		if (isStaleMate(root) && playerIsBlack(root)){										  // white causes stalemate
 			if (utilityScore < 0) utilityScore += 500;								   // if losing, take the stalemate
 			else 				  utilityScore -= 500;	 
-			return new Result(root, utilityScore); 								// try to just avoid sttalemate for now
+			return new Result(root, utilityScore); 					
 		}
 		if (isStaleMate(root) && playerIsWhite(root)){												 // Black just went
 			if (utilityScore > 0) utilityScore -= 500;								   // if losing, take the stalemate
 			else 				  utilityScore += 500;	 
-			return new Result(root, utilityScore); 							    // try to just avoid sttalemate for now
+			return new Result(root, utilityScore); 							   
 		}
 		if (isCheck(root) && playerIsWhite(root)){									    // black has put white in check
 			utilityScore -= 50;
@@ -98,20 +99,6 @@ public class MyBot extends Bot {
 		return new Result(root, utilityScore);                   
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double pawnPositionModifier(ArrayList<Piece> pieces, String player){
-		//-------------------------------------------------------------------------------------------------------------
-		double val = 1;
-		for (Piece p : pieces){
-			if (isPawn(p) && player.equals("WHITE")){
-				val *= (p.rank - 1);							   // white pawn more valuable as it moves up the board
-			}
-			if (isPawn(p) && player.equals("BLACK")){
-				val *= (8 - p.rank);						     // black pawn more valuable as it moves down the board
-			}
-		}
-		return val;
-	}
-	//-----------------------------------------------------------------------------------------------------------------
 	private double materialValueForPlayer(State root){
 		//-------------------------------------------------------------------------------------------------------------
 		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
@@ -120,12 +107,57 @@ public class MyBot extends Bot {
 		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
 		whiteMaterialValue += pawnPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
 		blackMaterialvalue += pawnPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+		whiteMaterialValue += rookPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
+		blackMaterialvalue += rookPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+		whiteMaterialValue += queenPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
+		blackMaterialvalue += queenPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
 
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
-
 	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<Piece> getPieceOjbects(State root, String player){      // iterate the board to get all the actual piece objects 
+	private double pawnPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isPawn(p) && player.equals("WHITE")){
+				val += (p.rank - 1);							   // white pawn more valuable as it moves up the board
+			}
+			if (isPawn(p) && player.equals("BLACK")){
+				val += (8 - p.rank);						     // black pawn more valuable as it moves down the board
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double rookPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isRook(p) && player.equals("WHITE")){
+				val = (ROOK_TABLE[p.rank][p.file]);						
+			}
+			if (isRook(p) && player.equals("BLACK")){
+				val = (ROOK_TABLE[7-p.rank][p.file]);	;						   
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double queenPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isQueen(p) && player.equals("WHITE")){
+				val = (QUEEN_TABLE[p.rank][p.file]);						
+			}
+			if (isQueen(p) && player.equals("BLACK")){
+				val = (QUEEN_TABLE[7-p.rank][p.file]);	;						   
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private ArrayList<Piece> getPieceOjbects(State root, String player){  // iterate board to get all the piece objects 
 		//-------------------------------------------------------------------------------------------------------------
 		ArrayList<Piece> boardPieces = new ArrayList<>();
 		for (int i = 0 ; i < 8 ; i ++){
@@ -240,5 +272,29 @@ public class MyBot extends Bot {
 			this.utility = utility;
 		}
 	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double[][] ROOK_TABLE = {
+		// a     b     c     d     e     f     g     h
+		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // Rank 8
+		{ 1.5,  2.0,  2.0,  2.0,  2.0,  2.0,  2.0,  1.5 }, // Rank 7
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 6
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 5
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 4
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 3
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 2
+		{ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0 }  // Rank 1
+	};
+	private double[][] QUEEN_TABLE = {
+		// a     b     c     d     e     f     g     h
+		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}, // Rank 8
+		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, // Rank 7
+		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, // Rank 6
+		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2}, // Rank 5
+		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2}, // Rank 4
+		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, // Rank 3
+		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, // Rank 2
+		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}  // Rank 1
+	};
+
 }
 
