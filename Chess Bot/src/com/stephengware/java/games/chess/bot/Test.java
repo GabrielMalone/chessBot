@@ -26,10 +26,10 @@ public class Test {
 	public static void main(String[] args) throws IOException {
 		Piece.load();
 		Bot[] bots = new Bot[]{
-				// new Human(),
-				// new GreedyBot(),
+				new Human(),
 				new MyBot(),
-				new RandomBot(),
+				// new GreedyBot(),
+				// new RandomBot(),
 				// new NoviceBot(),
 				// new BeginnerBot(),
 				//new IntermediateBot(),

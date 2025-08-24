@@ -32,23 +32,6 @@ public class MyBot extends Bot {
 		super("gmalone1");    																			 // name my bot
 	}
 
-	//-----------------------------------------------------------------------------------------------------------------
-	private static final class Result {
-		//-------------------------------------------------------------------------------------------------------------
-		public State state;
-		public double maxBlackPieceThatCanBeTaken;
-		public double maxWhitePieceThatCanBeTaken;
-		public double utility;
-
-		public Result(State state, double maxWhitePieceThatCanBeTaken, double maxBlackPieceThatCanBeTaken) {
-			this.state = state;
-			this.maxWhitePieceThatCanBeTaken = maxWhitePieceThatCanBeTaken;
-			this.maxBlackPieceThatCanBeTaken = maxBlackPieceThatCanBeTaken;
-			this.utility = maxWhitePieceThatCanBeTaken - maxBlackPieceThatCanBeTaken;
-		}
-	}
-
-
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
@@ -57,6 +40,56 @@ public class MyBot extends Bot {
 		initPieceValues();
 		return greedy(root).state;
 	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private Result greedy(State root){ 															   // Greedy bot method
+		//-------------------------------------------------------------------------------------------------------------
+		ArrayList<State> childrenStates = getChildStates(root);
+		System.out.printf("child states: %d", childrenStates.size());
+		double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
+		double optimumUtilityBlack = Double.POSITIVE_INFINITY;
+		State optimumState = null;
+		double optimumUtility = 0;
+		for (State c : childrenStates) {
+			Result r = evaluateState(c);
+			if (r.state.check && r.state.over) return r; 									   // if check mate take it
+			if (this.curGame.player.name().equals("WHITE") 
+				&& r.utility >= optimumUtilityWhite){
+				optimumUtilityWhite = r.utility;	
+				optimumState = r.state;
+			}
+			if (this.curGame.player.name().equals("BLACK") 
+				&& r.utility <= optimumUtilityBlack){
+				System.out.printf("\nutility score: %f\n", r.utility);
+				optimumUtilityBlack = r.utility;
+				optimumState = r.state;
+			}
+		} 						
+
+		if (this.curGame.player.name().equals("WHITE")) {
+			optimumUtility = optimumUtilityWhite;
+		} else {
+			optimumUtility = optimumUtilityBlack;
+		}
+
+		return new Result(optimumState, optimumUtility);
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private Result evaluateState(State root) {
+		//-------------------------------------------------------------------------------------------------------------
+		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");
+		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");
+
+		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);
+		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);
+
+		System.out.printf("\nwhite value: %f\n", whiteMaterialValue); // check validity
+		System.out.printf("black value: %f\n", blackMaterialvalue); // check validity
+
+		return new Result(root, whiteMaterialValue - blackMaterialvalue);
+	}
+	// private double pieceModificationTable(){
+
+	// }
 	//-----------------------------------------------------------------------------------------------------------------
 	private ArrayList<State> getChildStates(State root){ 						   // GET NEXT POSSIBLE GAME STATES
 		//-------------------------------------------------------------------------------------------------------------
@@ -94,7 +127,15 @@ public class MyBot extends Bot {
 		}
 		return pieces;
 	}
-
+	//-----------------------------------------------------------------------------------------------------------------
+	private double evaluateValueOfPieces(HashMap<String, Integer> Peices){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (String piece : this.chessPieces){ 								// iterate through pawn, knight, rook, etc. 
+			val += Peices.get(piece) * this.pieceValues.get(piece);   // get the number of pawns or w/e piece * its val
+		}
+		return val;
+	}
 	//-----------------------------------------------------------------------------------------------------------------			
 	private boolean isPawn(Piece piece){													// HELPER METHODS FOR ABOVE
 		return piece.getClass() == Pawn.class;
@@ -129,61 +170,18 @@ public class MyBot extends Bot {
 		this.pieceValues.put("Rook", 5);
 		this.pieceValues.put("Bishop", 3);
 		this.pieceValues.put("Queen", 9);
-		this.pieceValues.put("King", 100);
+		this.pieceValues.put("King", 0);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private Result evaluateState(State root) {
+	private static final class Result {
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> prevWhitePeices = getPieces(root.previous.board, "WHITE");
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");
-		HashMap<String, Integer> prevBlackPeices = getPieces(root.previous.board, "BLACK");
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");
-			  
-		double maxWhitePieceThatCanBeTaken = maxPieceValueOfState(prevWhitePeices, curWhitePeices) ;
-		double maxBlackPieceThatCanBeTaken = maxPieceValueOfState(prevBlackPeices, curBlackPeices) ; 
+		public State state;
+		public double utility;
 
-		return new Result(root, maxWhitePieceThatCanBeTaken, maxBlackPieceThatCanBeTaken);
-	}
-	//-----------------------------------------------------------------------------------------------------------------
-	private double maxPieceValueOfState(HashMap<String, Integer> initSate, HashMap<String, Integer> childState){
-		//-------------------------------------------------------------------------------------------------------------
-		double max = 0;
-		for (String p : this.chessPieces) {
-			if (initSate.get(p) != childState.get(p) && this.pieceValues.get(p) > max){   // if piece taken, see if mvp
-				max = this.pieceValues.get(p);
-			}
+		public Result(State state, double utility) {
+			this.state = state;
+			this.utility = utility;
 		}
-		return max;
 	}
-	//-----------------------------------------------------------------------------------------------------------------
-	private Result greedy(State root){ 															   // Greedy bot method
-		//-------------------------------------------------------------------------------------------------------------
-		ArrayList<State> childrenStates = getChildStates(root);
-		Result optimalResult = evaluateState(childrenStates.get(0));            // set base choice to first child 
-		for (State c : childrenStates) {
-			Result r = evaluateState(c);
-			if (r.state.check && r.state.over) return r; 									   // if check mate take it
-			if (r.state.check) return r; 													       // if check, take it
-			if (this.curGame.player.name().equals("WHITE") 
-				&& r.maxBlackPieceThatCanBeTaken > optimalResult.maxBlackPieceThatCanBeTaken){
-				System.out.printf("I am the white player and choosing the highest black peice that can be taken: %f\n",
-					 r.maxBlackPieceThatCanBeTaken);
-				optimalResult = r;
-			}
-			if (this.curGame.player.name().equals("BLACK") 
-				&& r.maxWhitePieceThatCanBeTaken > optimalResult.maxWhitePieceThatCanBeTaken){
-				System.out.printf("I am the black player and choosing the highest white peice that can be taken: %f\n", 
-					r.maxWhitePieceThatCanBeTaken);
-				optimalResult = r;
-			}
-		} 																
-		return optimalResult;
-	}
-	//-----------------------------------------------------------------------------------------------------------------
-	// private Result minimax(State root, int depth, boolean maximizingPlayer) {
-	// 	if (root.over || depth == 0) return evaluateState(root);
-	// 	ArrayList<State> childStates = getChildStates(root);
-	// }
-	//-----------------------------------------------------------------------------------------------------------------
 }
 
