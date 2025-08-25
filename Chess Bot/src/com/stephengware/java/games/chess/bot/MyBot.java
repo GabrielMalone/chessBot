@@ -17,6 +17,7 @@ import com.stephengware.java.games.chess.state.*;
 public class MyBot extends Bot {
 
 	//-----------------------------------------------------------------------------------------------------------------
+	double MAX_MATERIAL_VAL = 64.0;
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
@@ -32,46 +33,48 @@ public class MyBot extends Bot {
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
 		initPieceValues();
-		return minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, true).state;
-		// return greedy(root).state;
+		return minimaxABpruning(root, 6, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, true).state;
+		//return greedy(root).state;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
-		// psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
+		// I addapted psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
 		//-------------------------------------------------------------------------------------------------------------
-		if (depth == 0 || root.over) return evaluateState(root);
+		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 		ArrayList<State> childStates = getChildStates(root);
-		if (maximizingPlayer) {
-			Result optimalState = new Result(null, Double.NEGATIVE_INFINITY);
-			for (State child : childStates) {
+		
+		if (maximizingPlayer) {           
+			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
+			for (State child : childStates) {                             // recurse on child states from current state
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
-				if (result.utility > optimalState.utility) {
-					optimalState.utility = result.utility;
-					optimalState.state = child;
+				if (result.utility > maximalState.utility) { 
+					maximalState.utility = result.utility;
+					maximalState.state = child;
 				}
 
-				alpha = Math.max(alpha, optimalState.utility);
-				if (beta <= alpha) {
+				alpha = Math.max(alpha, maximalState.utility);  // highest score maximizing player is guaranteed so far
+				if (beta <= alpha) {       // don't explore any other paths since black wont allow us to pick this path
 					break;
 				}
-				
+
 			}
-			return optimalState;
+			return maximalState;
+
 		} else {
-			Result optimalState = new Result(null, Double.POSITIVE_INFINITY);
+			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
 			for (State child : childStates) {
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, true);
-				if (result.utility < optimalState.utility) {
-					optimalState.utility = result.utility;
-					optimalState.state = child;
+				if (result.utility < minimalState.utility) {
+					minimalState.utility = result.utility;
+					minimalState.state = child;
 				}
-				beta = Math.min(beta, optimalState.utility);
+				beta = Math.min(beta, minimalState.utility);// lowest score the minimizing player is guaranteed so far
 				if (beta <= alpha) {
 					break;
 				}
 			}
-			return optimalState;
+			return minimalState;
 		}
 	}
 
@@ -144,28 +147,34 @@ public class MyBot extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
 		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
-		
 		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
 		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
+		boolean endGame = isEndGame(whiteMaterialValue + blackMaterialvalue);
 
-		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
-		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
-		whiteMaterialValue += queenPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
-		whiteMaterialValue += knightPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
-		whiteMaterialValue += bishopPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
-		whiteMaterialValue += kingPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += queenPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += knightPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += bishopPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += kingPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
 
-		blackMaterialvalue += pawnPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
-		blackMaterialvalue += rookPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
-		blackMaterialvalue += queenPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
-		blackMaterialvalue += knightPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
-		blackMaterialvalue += bishopPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
-		blackMaterialvalue += kingPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += pawnPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += rookPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += queenPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += knightPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += bishopPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += kingPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
 
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double pawnPositionModifier(ArrayList<Piece> pieces, String player){
+	private boolean isEndGame(Double materialVal){
+		return materialVal <= (MAX_MATERIAL_VAL * 0.5);
+		//-------------------------------------------------------------------------------------------------------------
+	}
+
+	//-----------------------------------------------------------------------------------------------------------------
+	private double pawnPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
 		double val = 0;
 		for (Piece p : pieces){
@@ -179,77 +188,92 @@ public class MyBot extends Bot {
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double rookPositionModifier(ArrayList<Piece> pieces, String player){
+	private double rookPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		
+		double[][] ROOKTABLE = endGame ? ROOK_ENDGAME_TABLE : ROOK_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isRook(p) && player.equals("WHITE")){
-				val = (ROOK_TABLE[p.rank][p.file]);						
+				val = (ROOKTABLE[p.rank][p.file]);						
 			}
 			if (isRook(p) && player.equals("BLACK")){
-				val = (ROOK_TABLE[7-p.rank][p.file]);	;						   
+				val = (ROOKTABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double queenPositionModifier(ArrayList<Piece> pieces, String player){
+	private double queenPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		
+		double[][] QUEENTABLE = endGame ? QUEEN_ENDGAME_TABLE : QUEEN_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isQueen(p) && player.equals("WHITE")){
-				val = (QUEEN_TABLE[p.rank][p.file]);						
+				val = (QUEENTABLE[p.rank][p.file]);						
 			}
 			if (isQueen(p) && player.equals("BLACK")){
-				val = (QUEEN_TABLE[7-p.rank][p.file]);	;						   
+				val = (QUEENTABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double knightPositionModifier(ArrayList<Piece> pieces, String player){
+	private double knightPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		
+		double[][] KNIGHTTABLE = endGame ? KNIGHT_ENDGAME_TABLE : KNIGHT_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isKnight(p) && player.equals("WHITE")){
-				val = (KNIGHT_TABLE[p.rank][p.file]);						
+				val = (KNIGHTTABLE[p.rank][p.file]);						
 			}
 			if (isKnight(p) && player.equals("BLACK")){
-				val = (KNIGHT_TABLE[7-p.rank][p.file]);	;						   
+				val = (KNIGHTTABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double bishopPositionModifier(ArrayList<Piece> pieces, String player){
+	private double bishopPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		
+		double[][] BISHOPTABLE = endGame ? BISHOP_ENDGAME_TABLE : BISHOP_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isBishop(p) && player.equals("WHITE")){
-				val = (BISHOP_TABLE[p.rank][p.file]);						
+				val = (BISHOPTABLE[p.rank][p.file]);						
 			}
 			if (isBishop(p) && player.equals("BLACK")){
-				val = (BISHOP_TABLE[7-p.rank][p.file]);	;						   
+				val = (BISHOPTABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private double kingPositionModifier(ArrayList<Piece> pieces, String player){
+	private double kingPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		
+		double[][] KINGTABLE = endGame ? KING_ENDGAME_TABLE : KING_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isKing(p) && player.equals("WHITE")){
-				val = (KING_TABLE[p.rank][p.file]);						
+				val = (KINGTABLE[p.rank][p.file]);						
 			}
 			if (isKing(p) && player.equals("BLACK")){
-				val = (KING_TABLE[7-p.rank][p.file]);	;						   
+				val = (KINGTABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<Piece> getPieceOjbects(State root, String player){  // iterate board to get all the piece objects 
+	private ArrayList<Piece> getPieceOjbects(State root, String player ){  // iterate board to get all the piece objects 
 		//-------------------------------------------------------------------------------------------------------------
 		ArrayList<Piece> boardPieces = new ArrayList<>();
 		for (int i = 0 ; i < 8 ; i ++){
@@ -367,7 +391,7 @@ public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private double[][] ROOK_TABLE = {
 		// a     b     c     d     e     f     g     h
-		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // Rank 8
+		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // rank 8
 		{ 1.5,  2.0,  2.0,  2.0,  2.0,  2.0,  2.0,  1.5 }, 
 		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
 		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
@@ -376,8 +400,18 @@ public class MyBot extends Bot {
 		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
 		{ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0 }  
 	};
+	private double[][] ROOK_ENDGAME_TABLE = {
+		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // rank 8
+		{ 0.5,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0.5 }, // slightly more centralized
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }  
+	};
 	private double[][] QUEEN_TABLE = {
-		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}, // Rank 8
+		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}, // rank 8
 		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
 		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3},
 		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2},
@@ -386,8 +420,18 @@ public class MyBot extends Bot {
 		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
 		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4} 
 	};
-	private double[][] KNIGHT_TABLE = {
-		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}, // Rank 8
+	private double[][] QUEEN_ENDGAME_TABLE = {			  // not as strong on edges
+		{-0.8, -0.6, -0.6, -0.5, -0.5, -0.6, -0.6, -0.8}, // rank 8 
+		{-0.6, -0.4, -0.2,  0.0,  0.0, -0.2, -0.4, -0.6},
+		{-0.6, -0.2,  0.2,  0.3,  0.3,  0.2, -0.2, -0.6},
+		{-0.5,  0.0,  0.3,  0.5,  0.5,  0.3,  0.0, -0.5}, // center is highly valued
+		{-0.5,  0.0,  0.3,  0.5,  0.5,  0.3,  0.0, -0.5},
+		{-0.6, -0.2,  0.2,  0.3,  0.3,  0.2, -0.2, -0.6},
+		{-0.6, -0.4, -0.2,  0.0,  0.0, -0.2, -0.4, -0.6},
+		{-0.8, -0.6, -0.6, -0.5, -0.5, -0.6, -0.6, -0.8}  
+	};
+	private double[][] KNIGHT_TABLE = {					  // stronger in middle than edges
+		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}, // rank 8
 		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6}, 
 		{-0.6,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.6}, 
 		{-0.6,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -0.6}, 
@@ -396,8 +440,18 @@ public class MyBot extends Bot {
 		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6},
 		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}  
 	};
-	private double[][] BISHOP_TABLE = {
-		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4}, // Rank 8
+	private double[][] KNIGHT_ENDGAME_TABLE = {
+		{-1.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.2}, // bad
+		{-1.0, -0.8,  0.0,  0.0,  0.0,  0.0, -0.8, -1.0},
+		{-1.0,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -1.0},
+		{-1.0,  0.0,  0.5,  0.8,  0.8,  0.5,  0.0, -1.0}, // central squares are golden
+		{-1.0,  0.0,  0.5,  0.8,  0.8,  0.5,  0.0, -1.0},
+		{-1.0,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -1.0},
+		{-1.0, -0.8,  0.0,  0.0,  0.0,  0.0, -0.8, -1.0},
+		{-1.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.2}  // also bad
+	};
+	private double[][] BISHOP_TABLE = {					  // stronger in middle than edges
+		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4}, // rank 8
 		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
 		{-0.3,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.3}, 
 		{-0.3,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.3},
@@ -406,8 +460,19 @@ public class MyBot extends Bot {
 		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
 		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4} 
 	};
-	private double[][] KING_TABLE = {
-		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, // Rank 8
+	private double[][] BISHOP_ENDGAME_TABLE = {
+		// a     b     c     d     e     f     g     h
+		{-0.6, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.6}, // rank 8
+		{-0.5, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.5},
+		{-0.5,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.5},
+		{-0.5,  0.0,  0.4,  0.6,  0.6,  0.4,  0.0, -0.5}, // center Diagonals are best
+		{-0.5,  0.0,  0.4,  0.6,  0.6,  0.4,  0.0, -0.5},
+		{-0.5,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.5},
+		{-0.5, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.5},
+		{-0.6, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.6} 
+	};
+	private double[][] KING_TABLE = {					  // midgame, want king to be stationary / protected
+		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, // rank 8
 		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
 		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
 		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, 
@@ -416,6 +481,17 @@ public class MyBot extends Bot {
 		{ 0.2,  0.2,  0.0, -0.2, -0.2,  0.0,  0.2,  0.2}, 
 		{ 0.3,  0.4,  0.1, -0.2, -0.2,  0.1,  0.4,  0.3} 
 	};
+	private double[][] KING_ENDGAME_TABLE = { 			  // want king to become attacking piece 
+		{-1.5, -1.2, -1.0, -0.8, -0.8, -1.0, -1.2, -1.5}, // rank 8 
+		{-1.0, -0.5, -0.3,  0.0,  0.0, -0.3, -0.5, -1.0},
+		{-0.8, -0.3,  0.3,  0.5,  0.5,  0.3, -0.3, -0.8},
+		{-0.7, -0.2,  0.5,  0.8,  0.8,  0.5, -0.2, -0.7}, 
+		{-0.7, -0.2,  0.5,  0.8,  0.8,  0.5, -0.2, -0.7},
+		{-0.8, -0.3,  0.3,  0.5,  0.5,  0.3, -0.3, -0.8},
+		{-1.0, -0.5, -0.3,  0.0,  0.0, -0.3, -0.5, -1.0},
+		{-1.5, -1.2, -1.0, -0.8, -0.8, -1.0, -1.2, -1.5}  
+	};
 
 }
+
 
