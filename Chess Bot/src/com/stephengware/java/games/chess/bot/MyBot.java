@@ -38,26 +38,30 @@ public class MyBot extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
+		// psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
+		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);
 		ArrayList<State> childStates = getChildStates(root);
 		if (maximizingPlayer) {
-			Result optimalState = new Result(  null, Double.NEGATIVE_INFINITY);
+			Result optimalState = new Result(null, Double.NEGATIVE_INFINITY);
 			for (State child : childStates) {
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
 				if (result.utility > optimalState.utility) {
 					optimalState.utility = result.utility;
 					optimalState.state = child;
 				}
+
 				alpha = Math.max(alpha, optimalState.utility);
 				if (beta <= alpha) {
 					break;
 				}
+				
 			}
 			return optimalState;
 		} else {
 			Result optimalState = new Result(null, Double.POSITIVE_INFINITY);
 			for (State child : childStates) {
-				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
+				Result result = minimaxABpruning(child, depth - 1, alpha, beta, true);
 				if (result.utility < optimalState.utility) {
 					optimalState.utility = result.utility;
 					optimalState.state = child;
