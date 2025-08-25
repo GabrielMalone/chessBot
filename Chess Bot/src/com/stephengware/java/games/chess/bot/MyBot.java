@@ -34,6 +34,8 @@ public class MyBot extends Bot {
 		initPieceValues();
 		return greedy(root).state;
 	}
+
+
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result greedy(State root){ 															   // Greedy bot method
 		//-------------------------------------------------------------------------------------------------------------
@@ -103,14 +105,23 @@ public class MyBot extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
 		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
+		
 		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
 		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
-		whiteMaterialValue += pawnPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
-		blackMaterialvalue += pawnPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
-		whiteMaterialValue += rookPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
-		blackMaterialvalue += rookPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
-		whiteMaterialValue += queenPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
-		blackMaterialvalue += queenPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+
+		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += queenPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += knightPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += bishopPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE");
+		whiteMaterialValue += kingPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE");
+
+		blackMaterialvalue += pawnPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += rookPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += queenPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += knightPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += bishopPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK");
+		blackMaterialvalue += kingPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK");
 
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
@@ -152,6 +163,48 @@ public class MyBot extends Bot {
 			}
 			if (isQueen(p) && player.equals("BLACK")){
 				val = (QUEEN_TABLE[7-p.rank][p.file]);	;						   
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double knightPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isKnight(p) && player.equals("WHITE")){
+				val = (KNIGHT_TABLE[p.rank][p.file]);						
+			}
+			if (isKnight(p) && player.equals("BLACK")){
+				val = (KNIGHT_TABLE[7-p.rank][p.file]);	;						   
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double bishopPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isBishop(p) && player.equals("WHITE")){
+				val = (BISHOP_TABLE[p.rank][p.file]);						
+			}
+			if (isBishop(p) && player.equals("BLACK")){
+				val = (BISHOP_TABLE[7-p.rank][p.file]);	;						   
+			}
+		}
+		return val;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private double kingPositionModifier(ArrayList<Piece> pieces, String player){
+		//-------------------------------------------------------------------------------------------------------------
+		double val = 0;
+		for (Piece p : pieces){
+			if (isKing(p) && player.equals("WHITE")){
+				val = (KING_TABLE[p.rank][p.file]);						
+			}
+			if (isKing(p) && player.equals("BLACK")){
+				val = (KING_TABLE[7-p.rank][p.file]);	;						   
 			}
 		}
 		return val;
@@ -276,24 +329,53 @@ public class MyBot extends Bot {
 	private double[][] ROOK_TABLE = {
 		// a     b     c     d     e     f     g     h
 		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // Rank 8
-		{ 1.5,  2.0,  2.0,  2.0,  2.0,  2.0,  2.0,  1.5 }, // Rank 7
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 6
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 5
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 4
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 3
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, // Rank 2
-		{ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0 }  // Rank 1
+		{ 1.5,  2.0,  2.0,  2.0,  2.0,  2.0,  2.0,  1.5 }, 
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
+		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
+		{ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0 }  
 	};
 	private double[][] QUEEN_TABLE = {
-		// a     b     c     d     e     f     g     h
 		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}, // Rank 8
-		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, // Rank 7
-		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, // Rank 6
-		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2}, // Rank 5
-		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2}, // Rank 4
-		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, // Rank 3
-		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, // Rank 2
-		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}  // Rank 1
+		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
+		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3},
+		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2},
+		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2},
+		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, 
+		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
+		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4} 
+	};
+	private double[][] KNIGHT_TABLE = {
+		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}, // Rank 8
+		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6}, 
+		{-0.6,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.6}, 
+		{-0.6,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -0.6}, 
+		{-0.6,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -0.6}, 
+		{-0.6,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.6}, 
+		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6},
+		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}  
+	};
+	private double[][] BISHOP_TABLE = {
+		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4}, // Rank 8
+		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
+		{-0.3,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.3}, 
+		{-0.3,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.3},
+		{-0.3,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.3}, 
+		{-0.3,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.3}, 
+		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
+		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4} 
+	};
+	private double[][] KING_TABLE = {
+		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, // Rank 8
+		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
+		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
+		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, 
+		{-0.6, -0.7, -0.8, -1.0, -1.0, -0.8, -0.7, -0.6}, 
+		{-0.4, -0.5, -0.6, -0.7, -0.7, -0.6, -0.5, -0.4},
+		{ 0.2,  0.2,  0.0, -0.2, -0.2,  0.0,  0.2,  0.2}, 
+		{ 0.3,  0.4,  0.1, -0.2, -0.2,  0.1,  0.4,  0.3} 
 	};
 
 }
