@@ -33,7 +33,7 @@ public class MyBot extends Bot {
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
 		initPieceValues();
-		return minimaxABpruning(root, 6, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, true).state;
+		return minimaxABpruning(root, 3, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root)).state;
 		//return greedy(root).state;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
@@ -50,8 +50,8 @@ public class MyBot extends Bot {
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
 				if (result.utility > maximalState.utility) { 
 					maximalState.utility = result.utility;
-					maximalState.state = child;
-				}
+					maximalState.state = child;  		 // need to set to child in the loop and not the returned state
+				}									 // returned state will have invalid moves since deeper in the tree
 
 				alpha = Math.max(alpha, maximalState.utility);  // highest score maximizing player is guaranteed so far
 				if (beta <= alpha) {       // don't explore any other paths since black wont allow us to pick this path
@@ -125,20 +125,20 @@ public class MyBot extends Bot {
 			return new Result(root, utilityScore); 
 		}
 		if (isStaleMate(root) && playerIsBlack(root)){										  // white causes stalemate
-			if (utilityScore < 0) utilityScore += 500;								   // if losing, take the stalemate
-			else 				  utilityScore -= 500;	 
+			if (utilityScore < 0) utilityScore += 1000;								   // if losing, take the stalemate
+			else			 	  utilityScore -= 1000;	 
 			return new Result(root, utilityScore); 					
 		}
 		if (isStaleMate(root) && playerIsWhite(root)){												 // Black just went
-			if (utilityScore > 0) utilityScore -= 500;								   // if losing, take the stalemate
-			else 				  utilityScore += 500;	 
+		    if (utilityScore > 0) utilityScore -= 1000;								   // if losing, take the stalemate
+			else 				  utilityScore += 1000;	 
 			return new Result(root, utilityScore); 							   
 		}
 		if (isCheck(root) && playerIsWhite(root)){									    // black has put white in check
-			utilityScore -= 50;
+			utilityScore -= 15;
 		}
 		if (isCheck(root) && playerIsBlack(root)){										// white has put black in check
-			utilityScore += 50;
+			utilityScore += 15;
 		}
 		return new Result(root, utilityScore);                   
 	}
@@ -169,7 +169,7 @@ public class MyBot extends Bot {
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private boolean isEndGame(Double materialVal){
-		return materialVal <= (MAX_MATERIAL_VAL * 0.5);
+		return materialVal <= (MAX_MATERIAL_VAL * 0.2);
 		//-------------------------------------------------------------------------------------------------------------
 	}
 
@@ -199,7 +199,7 @@ public class MyBot extends Bot {
 				val = (ROOKTABLE[p.rank][p.file]);						
 			}
 			if (isRook(p) && player.equals("BLACK")){
-				val = (ROOKTABLE[7-p.rank][p.file]);	;						   
+				val = (ROOKTABLE[7-p.rank][p.file]);							   
 			}
 		}
 		return val;
@@ -216,7 +216,7 @@ public class MyBot extends Bot {
 				val = (QUEENTABLE[p.rank][p.file]);						
 			}
 			if (isQueen(p) && player.equals("BLACK")){
-				val = (QUEENTABLE[7-p.rank][p.file]);	;						   
+				val = (QUEENTABLE[7-p.rank][p.file]);							   
 			}
 		}
 		return val;
@@ -233,7 +233,7 @@ public class MyBot extends Bot {
 				val = (KNIGHTTABLE[p.rank][p.file]);						
 			}
 			if (isKnight(p) && player.equals("BLACK")){
-				val = (KNIGHTTABLE[7-p.rank][p.file]);	;						   
+				val = (KNIGHTTABLE[7-p.rank][p.file]);						   
 			}
 		}
 		return val;
@@ -250,7 +250,7 @@ public class MyBot extends Bot {
 				val = (BISHOPTABLE[p.rank][p.file]);						
 			}
 			if (isBishop(p) && player.equals("BLACK")){
-				val = (BISHOPTABLE[7-p.rank][p.file]);	;						   
+				val = (BISHOPTABLE[7-p.rank][p.file]);						   
 			}
 		}
 		return val;
@@ -267,7 +267,7 @@ public class MyBot extends Bot {
 				val = (KINGTABLE[p.rank][p.file]);						
 			}
 			if (isKing(p) && player.equals("BLACK")){
-				val = (KINGTABLE[7-p.rank][p.file]);	;						   
+				val = (KINGTABLE[7-p.rank][p.file]);						   
 			}
 		}
 		return val;
