@@ -32,9 +32,44 @@ public class MyBot extends Bot {
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
 		initPieceValues();
-		return greedy(root).state;
+		return minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, true).state;
+		// return greedy(root).state;
 	}
-
+	//-----------------------------------------------------------------------------------------------------------------
+	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
+		//-------------------------------------------------------------------------------------------------------------
+		if (depth == 0 || root.over) return evaluateState(root);
+		ArrayList<State> childStates = getChildStates(root);
+		if (maximizingPlayer) {
+			Result optimalState = new Result(  null, Double.NEGATIVE_INFINITY);
+			for (State child : childStates) {
+				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
+				if (result.utility > optimalState.utility) {
+					optimalState.utility = result.utility;
+					optimalState.state = child;
+				}
+				alpha = Math.max(alpha, optimalState.utility);
+				if (beta <= alpha) {
+					break;
+				}
+			}
+			return optimalState;
+		} else {
+			Result optimalState = new Result(null, Double.POSITIVE_INFINITY);
+			for (State child : childStates) {
+				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
+				if (result.utility < optimalState.utility) {
+					optimalState.utility = result.utility;
+					optimalState.state = child;
+				}
+				beta = Math.min(beta, optimalState.utility);
+				if (beta <= alpha) {
+					break;
+				}
+			}
+			return optimalState;
+		}
+	}
 
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result greedy(State root){ 															   // Greedy bot method
