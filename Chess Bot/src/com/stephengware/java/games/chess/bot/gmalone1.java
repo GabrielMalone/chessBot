@@ -10,23 +10,26 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Stack;
+
 import com.stephengware.java.games.chess.state.*;
 
 
 //---------------------------------------------------------------------------------------------------------------------
-public class MyBot extends Bot {
+public class gmalone1 extends Bot {
 
 	//-----------------------------------------------------------------------------------------------------------------
-	double MAX_MATERIAL_VAL = 64.0;
+	private double MAX_MATERIAL_VAL = 64.0;
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 
 	//-----------------------------------------------------------------------------------------------------------------
-	public MyBot() { // BOT CONSTRUCTOR
+	public gmalone1() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
 		super("gmalone1");    																			 // name my bot
 	}
+
 
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
@@ -36,6 +39,22 @@ public class MyBot extends Bot {
 		return minimaxABpruning(root, 3, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root)).state;
 		//return greedy(root).state;
 	}
+
+	//-----------------------------------------------------------------------------------------------------------------
+	// private Result DFSID(State root, int maxDepth, int depth){
+	// 	//-------------------------------------------------------------------------------------------------------------
+		
+	// 	Stack<ArrayList<State>> stateStack = new Stack<>(); 										   // stack for DFS
+	// 	stateStack.push(getChildStates(root));										// get first level and add to stack
+	// 	HashSet<State> visitedStates = new HashSet<>();				// 
+	// 	while (! stateStack.empty() ) 		   // run ntil stack not empty, although this wil just run forever wont it?
+	// 	{
+	// 		// i think update minimiax to take in ArrayList<State> instead of root 
+	// 	}
+
+	// }
+
+
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
@@ -297,7 +316,8 @@ public class MyBot extends Bot {
 			if (!visitedStates.contains(nexState)){
 				children.add(nexState); 
 				visitedStates.add(nexState);										    // keep track of visited states
-			}		  	
+			}		
+			if (root.searchLimitReached()) System.out.printf("search limit reached: %b", root.searchLimitReached());  	
 		}	
 		return children; 		
 	}
@@ -312,6 +332,7 @@ public class MyBot extends Bot {
 		{
 			Piece curPeice = piece_iterator.next();
 			String playerMoving = curPeice.player.name();
+
 			if (playerMoving.equals(playerName)) {               // iterate opp's pieces and add up pieces on the board
 				if (isPawn(curPeice)) 	pieces.put("Pawn", 	pieces.get("Pawn")   + 1);
 				if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
@@ -461,7 +482,6 @@ public class MyBot extends Bot {
 		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4} 
 	};
 	private double[][] BISHOP_ENDGAME_TABLE = {
-		// a     b     c     d     e     f     g     h
 		{-0.6, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.6}, // rank 8
 		{-0.5, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.5},
 		{-0.5,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.5},
