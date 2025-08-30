@@ -96,38 +96,38 @@ public class gmalone1 extends Bot {
 		return false;
 	}
 
-	//-----------------------------------------------------------------------------------------------------------------
-	private Result greedy(State root){ 															   // Greedy bot method
-		//--------------------------------------------------------------------------------------------------------------
-		ArrayList<State> childStates = getChildStates(root);
-		double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
-		double optimumUtilityBlack = Double.POSITIVE_INFINITY;
-		State optimumState = null;
-		double optimumUtility = 0;
+	// //---------------------------------------------------------------------------------------------------------------
+	// private Result greedy(State root){ 															// Greedy bot method
+	// 	//--------------------------------------------------------------------------------------------------------------
+	// 	ArrayList<State> childStates = getChildStates(root);
+	// 	double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
+	// 	double optimumUtilityBlack = Double.POSITIVE_INFINITY;
+	// 	State optimumState = null;
+	// 	double optimumUtility = 0;
 
-		for (State c : childStates) {													    // iterate the child states
-			Result r = evaluateState(c);													    // result of evaluation
-			if (playerIsWhite(root) 
-				&& r.utility > optimumUtilityWhite){				   // looking to maximize score (white perspective)
-				optimumUtilityWhite = r.utility;	
-				optimumState = r.state;
-			}
-			if (playerIsBlack(root) 
-				&& r.utility < optimumUtilityBlack){			        // looking to minimze score (black perspective)
-				optimumUtilityBlack = r.utility;
-				optimumState = r.state;
-			}
-		} 				
+	// 	for (State c : childStates) {													    // iterate the child states
+	// 		Result r = evaluateState(c);													    // result of evaluation
+	// 		if (playerIsWhite(root) 
+	// 			&& r.utility > optimumUtilityWhite){				   // looking to maximize score (white perspective)
+	// 			optimumUtilityWhite = r.utility;	
+	// 			optimumState = r.state;
+	// 		}
+	// 		if (playerIsBlack(root) 
+	// 			&& r.utility < optimumUtilityBlack){			        // looking to minimze score (black perspective)
+	// 			optimumUtilityBlack = r.utility;
+	// 			optimumState = r.state;
+	// 		}
+	// 	} 				
 
-		if (playerIsWhite(root)) {
-			optimumUtility = optimumUtilityWhite; 					
-		} else {
-			optimumUtility = optimumUtilityBlack;
-		}	
-																  // if nothing stands out, just pick a random move
-		if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
-		return new Result(optimumState, optimumUtility);
-	}
+	// 	if (playerIsWhite(root)) {
+	// 		optimumUtility = optimumUtilityWhite; 					
+	// 	} else {
+	// 		optimumUtility = optimumUtilityBlack;
+	// 	}	
+	// 															  // if nothing stands out, just pick a random move
+	// 	if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
+	// 	return new Result(optimumState, optimumUtility);
+	// }
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
@@ -418,7 +418,7 @@ public class gmalone1 extends Bot {
 		}
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	// GAME BOARDS
+	// GAME BOARDS 									 // https://www.chessprogramming.org/Simplified_Evaluation_Function
 	//-----------------------------------------------------------------------------------------------------------------
 	private double[][] PAWN_TABLE = {
 		{  0,  0,  0,  0,  0,  0,  0,  0},
