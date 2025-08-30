@@ -17,7 +17,7 @@ import com.stephengware.java.games.chess.state.*;
 public class gmalone1 extends Bot {
 
 	//-----------------------------------------------------------------------------------------------------------------
-	private double MAX_MATERIAL_VAL = 4000.0; 
+	private double MAX_MATERIAL_VAL = 8000.0; 
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
@@ -29,7 +29,6 @@ public class gmalone1 extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		super("gmalone1");    																			 // name my bot
 	}
-
 
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
@@ -168,7 +167,7 @@ public class gmalone1 extends Bot {
 		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
 		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
 		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
-		boolean endGame = isEndGame(whiteMaterialValue + blackMaterialvalue);
+		boolean endGame = isEndGame(root.board);
 
 		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
 		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
@@ -187,9 +186,20 @@ public class gmalone1 extends Bot {
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean isEndGame(Double materialVal){
-		return materialVal <= (MAX_MATERIAL_VAL * 0.7);
-		//-------------------------------------------------------------------------------------------------------------
+	private boolean isEndGame(Board board){
+		HashMap<String, Integer> pieces = new HashMap<>();						   		   // track pieces on the board 
+		for (String p : this.chessPieces) pieces.put(p,0); 			         
+		Iterator<Piece> piece_iterator = board.iterator();	  						   // init map with values set to 0
+		// to determine material value for game phase calc all pieces except for pawns and kings
+		while(piece_iterator.hasNext())
+		{
+			Piece curPeice = piece_iterator.next();
+			if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
+			if (isRook(curPeice)) 	pieces.put("Rook", 	pieces.get("Rook")   + 1);
+			if (isBishop(curPeice)) pieces.put("Bishop",pieces.get("Bishop") + 1);
+			if (isQueen(curPeice)) 	pieces.put("Queen", pieces.get("Queen")  + 1);
+		}
+		return evaluateValueOfPieces(pieces) <= (MAX_MATERIAL_VAL * 0.7);
 	}
 
 	//-----------------------------------------------------------------------------------------------------------------
@@ -338,6 +348,7 @@ public class gmalone1 extends Bot {
 				if (isQueen(curPeice)) 	pieces.put("Queen", pieces.get("Queen")  + 1);
 				if (isKing(curPeice)) 	pieces.put("King", 	pieces.get("King") 	 + 1);
 			}
+
 		}
 		return pieces;
 	}
@@ -376,9 +387,9 @@ public class gmalone1 extends Bot {
 	private boolean isStaleMate(State root){
 		return root.over && !root.check;
 	}
-	private boolean isCheck(State root){
-		return root.check && !root.over;
-	}
+	// private boolean isCheck(State root){
+	// 	return root.check && !root.over;
+	// }
 	private boolean playerIsWhite(State root){
 		return root.player.name().equals("WHITE");
 	}
