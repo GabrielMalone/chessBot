@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
 
 import com.stephengware.java.games.chess.state.*;
 
@@ -19,10 +17,12 @@ import com.stephengware.java.games.chess.state.*;
 public class gmalone1 extends Bot {
 
 	//-----------------------------------------------------------------------------------------------------------------
-	private double MAX_MATERIAL_VAL = 64.0;
+	private double MAX_MATERIAL_VAL = 4000.0; 
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
+	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
+	int moves = 0; 
 
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone1() { // BOT CONSTRUCTOR
@@ -35,26 +35,14 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		initPieceValues();
-		return minimaxABpruning(root, 3, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root)).state;
+		initPieceValues();							 
+		//-------------------------------------------------------------------------------------------------------------
+		Result res = minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root));
+		System.out.printf("\nbest result from depth %d: %f\n", 3, res.utility);
+		return res.state;
+		//-------------------------------------------------------------------------------------------------------------
 		//return greedy(root).state;
 	}
-
-	//-----------------------------------------------------------------------------------------------------------------
-	// private Result DFSID(State root, int maxDepth, int depth){
-	// 	//-------------------------------------------------------------------------------------------------------------
-		
-	// 	Stack<ArrayList<State>> stateStack = new Stack<>(); 										   // stack for DFS
-	// 	stateStack.push(getChildStates(root));										// get first level and add to stack
-	// 	HashSet<State> visitedStates = new HashSet<>();				// 
-	// 	while (! stateStack.empty() ) 		   // run ntil stack not empty, although this wil just run forever wont it?
-	// 	{
-	// 		// i think update minimiax to take in ArrayList<State> instead of root 
-	// 	}
-
-	// }
-
-
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
@@ -62,16 +50,15 @@ public class gmalone1 extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 		ArrayList<State> childStates = getChildStates(root);
-		
 		if (maximizingPlayer) {           
 			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
 			for (State child : childStates) {                             // recurse on child states from current state
+				if (wasVisited(child)) continue;
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
 				if (result.utility > maximalState.utility) { 
 					maximalState.utility = result.utility;
 					maximalState.state = child;  		 // need to set to child in the loop and not the returned state
 				}									 // returned state will have invalid moves since deeper in the tree
-
 				alpha = Math.max(alpha, maximalState.utility);  // highest score maximizing player is guaranteed so far
 				if (beta <= alpha) {       // don't explore any other paths since black wont allow us to pick this path
 					break;
@@ -83,13 +70,14 @@ public class gmalone1 extends Bot {
 		} else {
 			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
 			for (State child : childStates) {
+				if (wasVisited(child)) continue;
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, true);
 				if (result.utility < minimalState.utility) {
 					minimalState.utility = result.utility;
 					minimalState.state = child;
 				}
-				beta = Math.min(beta, minimalState.utility);// lowest score the minimizing player is guaranteed so far
-				if (beta <= alpha) {
+				beta = Math.min(beta, minimalState.utility);// lowest score the minimizing player is guaranteed so far 
+				if (beta <= alpha) {  // white had better option earlier on in the tree, will never go down this route
 					break;
 				}
 			}
@@ -97,9 +85,21 @@ public class gmalone1 extends Bot {
 		}
 	}
 
+
+	//-----------------------------------------------------------------------------------------------------------------
+	private boolean wasVisited(State state){ // helper method for minimax above
+		//-------------------------------------------------------------------------------------------------------------
+		if (this.visited.contains(state)){ 														  // this has never run
+			System.out.println("just saved you some time");
+			return true;
+		} 
+		this.visited.add(state);
+		return false;
+	}
+
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result greedy(State root){ 															   // Greedy bot method
-		//-------------------------------------------------------------------------------------------------------------
+		//--------------------------------------------------------------------------------------------------------------
 		ArrayList<State> childStates = getChildStates(root);
 		double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
 		double optimumUtilityBlack = Double.POSITIVE_INFINITY;
@@ -153,12 +153,12 @@ public class gmalone1 extends Bot {
 			else 				  utilityScore += 1000;	 
 			return new Result(root, utilityScore); 							   
 		}
-		if (isCheck(root) && playerIsWhite(root)){									    // black has put white in check
-			utilityScore -= 15;
-		}
-		if (isCheck(root) && playerIsBlack(root)){										// white has put black in check
-			utilityScore += 15;
-		}
+		// if (isCheck(root) && playerIsWhite(root)){									// black has put white in check
+		// 	utilityScore -= 15;									// this just ends up making my player make stupid moves
+		// }
+		// if (isCheck(root) && playerIsBlack(root)){									// white has put black in check
+		// 	utilityScore += 15;
+		// }
 		return new Result(root, utilityScore);                   
 	}
 	//-----------------------------------------------------------------------------------------------------------------
@@ -188,20 +188,22 @@ public class gmalone1 extends Bot {
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private boolean isEndGame(Double materialVal){
-		return materialVal <= (MAX_MATERIAL_VAL * 0.2);
+		return materialVal <= (MAX_MATERIAL_VAL * 0.7);
 		//-------------------------------------------------------------------------------------------------------------
 	}
 
 	//-----------------------------------------------------------------------------------------------------------------
 	private double pawnPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
+		double[][] PAWNTABLE = endGame ? PAWN_ENDGAME_TABLE : PAWN_TABLE;
+		
 		double val = 0;
 		for (Piece p : pieces){
 			if (isPawn(p) && player.equals("WHITE")){
-				val += (p.rank - 1);							   // white pawn more valuable as it moves up the board
+				val = PAWNTABLE[p.rank][p.file];							   
 			}
 			if (isPawn(p) && player.equals("BLACK")){
-				val += (8 - p.rank);						     // black pawn more valuable as it moves down the board
+				val = PAWNTABLE[7-p.rank][p.file];						
 			}
 		}
 		return val;
@@ -292,7 +294,7 @@ public class gmalone1 extends Bot {
 		return val;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<Piece> getPieceOjbects(State root, String player ){  // iterate board to get all the piece objects 
+	private ArrayList<Piece> getPieceOjbects(State root, String player ){ // iterate board to get all the piece objects 
 		//-------------------------------------------------------------------------------------------------------------
 		ArrayList<Piece> boardPieces = new ArrayList<>();
 		for (int i = 0 ; i < 8 ; i ++){
@@ -308,16 +310,11 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private ArrayList<State> getChildStates(State root){ 						       // GET NEXT POSSIBLE GAME STATES
 		//-------------------------------------------------------------------------------------------------------------
-		Set<State> visitedStates = new HashSet<>();  
 		ArrayList<State> children = new ArrayList<>();	     // This list will hold all the children nodes of the root.
 		Iterator<State> iterator = root.next().iterator();        // Generate all children nodes of the root - all the
 		while(!root.searchLimitReached() && iterator.hasNext()) {// possible next states of the game and do not exceed
-			State nexState = iterator.next(); 	
-			if (!visitedStates.contains(nexState)){
-				children.add(nexState); 
-				visitedStates.add(nexState);										    // keep track of visited states
-			}		
-			if (root.searchLimitReached()) System.out.printf("search limit reached: %b", root.searchLimitReached());  	
+			State nexState = iterator.next(); 
+			children.add(nexState); 								   			
 		}	
 		return children; 		
 	}
@@ -391,11 +388,11 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
 		//-------------------------------------------------------------------------------------------------------------
-		this.pieceValues.put("Pawn", 1);
-		this.pieceValues.put("Knight", 3);
-		this.pieceValues.put("Rook", 5);
-		this.pieceValues.put("Bishop", 3);
-		this.pieceValues.put("Queen", 9);
+		this.pieceValues.put("Pawn", 100);
+		this.pieceValues.put("Knight", 320);
+		this.pieceValues.put("Rook", 500);
+		this.pieceValues.put("Bishop", 330);
+		this.pieceValues.put("Queen", 900);
 		this.pieceValues.put("King", 0);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
@@ -410,106 +407,128 @@ public class gmalone1 extends Bot {
 		}
 	}
 	//-----------------------------------------------------------------------------------------------------------------
+	// GAME BOARDS
+	//-----------------------------------------------------------------------------------------------------------------
+	private double[][] PAWN_TABLE = {
+		{  0,  0,  0,  0,  0,  0,  0,  0},
+		{ 50, 50, 50, 50, 50, 50, 50, 50},   
+		{ 10, 10, 20, 35, 35, 20, 10, 10},
+		{  5,  5, 10, 25, 25, 10,  5,  5},
+		{  0,  0,  0, 15, 15,  0,  0,  0},
+		{  5, -5,-10,  0,  0,-10, -5,  5},
+		{  5, 10, 10,-20,-20, 10, 10,  5},
+		{  0,  0,  0,  0,  0,  0,  0,  0}
+	};
+	private double[][] PAWN_ENDGAME_TABLE ={
+		{  0,  5, 10, 15, 15, 10,  5,  0},
+		{ 10, 15, 20, 25, 25, 20, 15, 10},
+		{  5, 10, 15, 30, 30, 15, 10,  5},
+		{  0,  5, 15, 25, 25, 15,  5,  0},
+		{  0,  0, 10, 20, 20, 10,  0,  0},
+		{  0,  0,  5, 15, 15,  5,  0,  0},
+		{  0,  0,  0, 10, 10,  0,  0,  0},
+		{  0,  0,  0,  0,  0,  0,  0,  0}
+	};
 	private double[][] ROOK_TABLE = {
-		// a     b     c     d     e     f     g     h
-		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // rank 8
-		{ 1.5,  2.0,  2.0,  2.0,  2.0,  2.0,  2.0,  1.5 }, 
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 }, 
-		{ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0 }  
+		// a   b   c   d   e   f   g   h
+		{  0,  0,  0,  5,  5,  0,  0,  0},
+		{ -5,  0,  0,  0,  0,  0,  0, -5},
+		{ -5,  0,  0,  0,  0,  0,  0, -5},
+		{ -5,  0,  0,  5,  5,  0,  0, -5},
+		{ -5,  0,  0,  5,  5,  0,  0, -5},
+		{ -5,  0,  0,  0,  0,  0,  0, -5},
+		{  5, 10, 10, 10, 10, 10, 10,  5}, 
+		{  0,  0,  0,  0,  0,  0,  0,  0}
 	};
 	private double[][] ROOK_ENDGAME_TABLE = {
-		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }, // rank 8
-		{ 0.5,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0.5 }, // slightly more centralized
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5 },
-		{ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0 }  
+		{  0,  0,  0,  5,  5,  0,  0,  0},
+		{  0,  5,  5, 10, 10,  5,  5,  0},
+		{  0,  0,  5, 10, 10,  5,  0,  0},
+		{  0,  0,  5, 10, 10,  5,  0,  0},
+		{  0,  0,  5, 10, 10,  5,  0,  0},
+		{  0,  0,  5, 10, 10,  5,  0,  0},
+		{  5, 10, 10, 15, 15, 10, 10,  5},
+		{  0,  0,  0,  0,  0,  0,  0,  0}
 	};
 	private double[][] QUEEN_TABLE = {
-		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4}, // rank 8
-		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
-		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3},
-		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2},
-		{-0.2,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.2},
-		{-0.3, -0.1,  0.1,  0.2,  0.2,  0.1, -0.1, -0.3}, 
-		{-0.3, -0.2, -0.1,  0.0,  0.0, -0.1, -0.2, -0.3}, 
-		{-0.4, -0.3, -0.3, -0.2, -0.2, -0.3, -0.3, -0.4} 
+		{-20,-10,-10, -5, -5,-10,-10,-20},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-10,  0,  5,  5,  5,  5,  0,-10},
+		{ -5,  0,  5,  5,  5,  5,  0, -5},
+		{ -5,  0,  5,  5,  5,  5,  0, -5},
+		{-10,  0,  5,  5,  5,  5,  0,-10},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-20,-10,-10, -5, -5,-10,-10,-20}
 	};
-	private double[][] QUEEN_ENDGAME_TABLE = {			  // not as strong on edges
-		{-0.8, -0.6, -0.6, -0.5, -0.5, -0.6, -0.6, -0.8}, // rank 8 
-		{-0.6, -0.4, -0.2,  0.0,  0.0, -0.2, -0.4, -0.6},
-		{-0.6, -0.2,  0.2,  0.3,  0.3,  0.2, -0.2, -0.6},
-		{-0.5,  0.0,  0.3,  0.5,  0.5,  0.3,  0.0, -0.5}, // center is highly valued
-		{-0.5,  0.0,  0.3,  0.5,  0.5,  0.3,  0.0, -0.5},
-		{-0.6, -0.2,  0.2,  0.3,  0.3,  0.2, -0.2, -0.6},
-		{-0.6, -0.4, -0.2,  0.0,  0.0, -0.2, -0.4, -0.6},
-		{-0.8, -0.6, -0.6, -0.5, -0.5, -0.6, -0.6, -0.8}  
+	private double[][] QUEEN_ENDGAME_TABLE = {			 
+		{-20,-10,-10, -5, -5,-10,-10,-20},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-10,  0, 10, 10, 10, 10,  0,-10},
+		{ -5,  0, 10, 15, 15, 10,  0, -5},
+		{ -5,  0, 10, 15, 15, 10,  0, -5},
+		{-10,  0, 10, 10, 10, 10,  0,-10},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-20,-10,-10, -5, -5,-10,-10,-20}
 	};
-	private double[][] KNIGHT_TABLE = {					  // stronger in middle than edges
-		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}, // rank 8
-		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6}, 
-		{-0.6,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.6}, 
-		{-0.6,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -0.6}, 
-		{-0.6,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -0.6}, 
-		{-0.6,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.6}, 
-		{-0.6, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.6},
-		{-0.8, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.8}  
+	private double[][] KNIGHT_TABLE = {				
+		{-50,-40,-30,-30,-30,-30,-40,-50},
+		{-40,-20,  0,  0,  0,  0,-20,-40},
+		{-30,  0, 10, 15, 15, 10,  0,-30},
+		{-30,  5, 15, 20, 20, 15,  5,-30},
+		{-30,  0, 15, 20, 20, 15,  0,-30},
+		{-30,  5, 10, 15, 15, 10,  5,-30},
+		{-40,-20,  0,  5,  5,  0,-20,-40},
+		{-50,-40,-30,-30,-30,-30,-40,-50} 
 	};
 	private double[][] KNIGHT_ENDGAME_TABLE = {
-		{-1.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.2}, // bad
-		{-1.0, -0.8,  0.0,  0.0,  0.0,  0.0, -0.8, -1.0},
-		{-1.0,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -1.0},
-		{-1.0,  0.0,  0.5,  0.8,  0.8,  0.5,  0.0, -1.0}, // central squares are golden
-		{-1.0,  0.0,  0.5,  0.8,  0.8,  0.5,  0.0, -1.0},
-		{-1.0,  0.0,  0.4,  0.5,  0.5,  0.4,  0.0, -1.0},
-		{-1.0, -0.8,  0.0,  0.0,  0.0,  0.0, -0.8, -1.0},
-		{-1.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.2}  // also bad
+		{-50,-40,-30,-30,-30,-30,-40,-50},
+		{-40,-20,  0,  0,  0,  0,-20,-40},
+		{-30,  0, 10, 15, 15, 10,  0,-30},
+		{-30,  5, 15, 20, 20, 15,  5,-30},
+		{-30,  0, 15, 20, 20, 15,  0,-30},
+		{-30,  5, 10, 15, 15, 10,  5,-30},
+		{-40,-20,  0,  0,  0,  0,-20,-40},
+		{-50,-40,-30,-30,-30,-30,-40,-50}
 	};
-	private double[][] BISHOP_TABLE = {					  // stronger in middle than edges
-		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4}, // rank 8
-		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
-		{-0.3,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.3}, 
-		{-0.3,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.3},
-		{-0.3,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.3}, 
-		{-0.3,  0.0,  0.2,  0.3,  0.3,  0.2,  0.0, -0.3}, 
-		{-0.3, -0.2,  0.0,  0.0,  0.0,  0.0, -0.2, -0.3},
-		{-0.4, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.4} 
+	private double[][] BISHOP_TABLE = {					 
+		{-20,-10,-10,-10,-10,-10,-10,-20},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-10,  0,  5, 10, 10,  5,  0,-10},
+		{-10,  5,  5, 10, 10,  5,  5,-10},
+		{-10,  0, 10, 10, 10, 10,  0,-10},
+		{-10, 10, 10, 10, 10, 10, 10,-10},
+		{-10,  5,  0,  0,  0,  0,  5,-10},
+		{-20,-10,-10,-10,-10,-10,-10,-20}
 	};
 	private double[][] BISHOP_ENDGAME_TABLE = {
-		{-0.6, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.6}, // rank 8
-		{-0.5, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.5},
-		{-0.5,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.5},
-		{-0.5,  0.0,  0.4,  0.6,  0.6,  0.4,  0.0, -0.5}, // center Diagonals are best
-		{-0.5,  0.0,  0.4,  0.6,  0.6,  0.4,  0.0, -0.5},
-		{-0.5,  0.0,  0.3,  0.4,  0.4,  0.3,  0.0, -0.5},
-		{-0.5, -0.4,  0.0,  0.0,  0.0,  0.0, -0.4, -0.5},
-		{-0.6, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.6} 
+		{-20,-10,-10,-10,-10,-10,-10,-20},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-10,  0, 10, 15, 15, 10,  0,-10},
+		{-10, 10, 15, 20, 20, 15, 10,-10},
+		{-10, 10, 15, 20, 20, 15, 10,-10},
+		{-10,  0, 10, 15, 15, 10,  0,-10},
+		{-10,  0,  0,  0,  0,  0,  0,-10},
+		{-20,-10,-10,-10,-10,-10,-10,-20}
 	};
-	private double[][] KING_TABLE = {					  // midgame, want king to be stationary / protected
-		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, // rank 8
-		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
-		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8},
-		{-0.8, -0.9, -1.0, -1.2, -1.2, -1.0, -0.9, -0.8}, 
-		{-0.6, -0.7, -0.8, -1.0, -1.0, -0.8, -0.7, -0.6}, 
-		{-0.4, -0.5, -0.6, -0.7, -0.7, -0.6, -0.5, -0.4},
-		{ 0.2,  0.2,  0.0, -0.2, -0.2,  0.0,  0.2,  0.2}, 
-		{ 0.3,  0.4,  0.1, -0.2, -0.2,  0.1,  0.4,  0.3} 
+	private double[][] KING_TABLE = {				
+		{-30,-40,-40,-50,-50,-40,-40,-30},
+		{-30,-40,-40,-50,-50,-40,-40,-30},
+		{-30,-35,-40,-50,-50,-40,-35,-30},
+		{-30,-35,-40,-55,-55,-40,-35,-30},
+		{-20,-30,-35,-45,-45,-35,-30,-20},
+		{-10,-20,-20,-20,-20,-20,-20,-10},
+		{ 20, 20,  0,  0,  0,  0, 20, 20},
+		{ 30, 40, 10,  0,  0, 10, 40, 30}
 	};
-	private double[][] KING_ENDGAME_TABLE = { 			  // want king to become attacking piece 
-		{-1.5, -1.2, -1.0, -0.8, -0.8, -1.0, -1.2, -1.5}, // rank 8 
-		{-1.0, -0.5, -0.3,  0.0,  0.0, -0.3, -0.5, -1.0},
-		{-0.8, -0.3,  0.3,  0.5,  0.5,  0.3, -0.3, -0.8},
-		{-0.7, -0.2,  0.5,  0.8,  0.8,  0.5, -0.2, -0.7}, 
-		{-0.7, -0.2,  0.5,  0.8,  0.8,  0.5, -0.2, -0.7},
-		{-0.8, -0.3,  0.3,  0.5,  0.5,  0.3, -0.3, -0.8},
-		{-1.0, -0.5, -0.3,  0.0,  0.0, -0.3, -0.5, -1.0},
-		{-1.5, -1.2, -1.0, -0.8, -0.8, -1.0, -1.2, -1.5}  
+	private double[][] KING_ENDGAME_TABLE = { 			 
+		{-50,-30,-10,  0,  0,-10,-30,-50},
+    	{-30,-10, 10, 20, 20, 10,-10,-30},
+   	 	{-10, 10, 20, 30, 30, 20, 10,-10},
+    	{  0, 20, 30, 40, 40, 30, 20,  0},
+    	{  0, 20, 30, 40, 40, 30, 20,  0},
+    	{-10, 10, 20, 30, 30, 20, 10,-10},
+    	{-30,-10, 10, 20, 20, 10,-10,-30},
+    	{-50,-30,-10,  0,  0,-10,-30,-50}
 	};
 
 }

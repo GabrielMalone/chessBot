@@ -26,13 +26,13 @@ public class Test {
 	public static void main(String[] args) throws IOException {
 		Piece.load();
 		Bot[] bots = new Bot[]{
-				new gmalone1(),
 				// new Human(),
 				// new RandomBot(),
+				new gmalone1(),
 				// new GreedyBot(),
-				new NoviceBot(),
-				// new BeginnerBot(),
-				//new IntermediateBot(),
+				// new NoviceBot(),
+				new BeginnerBot(),
+				// new IntermediateBot(),
 		};
 		Tournament tournament = new Tournament(2, bots);
 		tournament.play();
