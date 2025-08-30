@@ -15,15 +15,12 @@ import com.stephengware.java.games.chess.state.*;
 
 //---------------------------------------------------------------------------------------------------------------------
 public class gmalone1 extends Bot {
-
 	//-----------------------------------------------------------------------------------------------------------------
 	private double MAX_MATERIAL_VAL = 8000.0; 
 	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
-	int moves = 0; 
-
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone1() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
@@ -34,10 +31,10 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		initPieceValues();							 
+		initPieceValues();	              // ideally this would be at the start game level but dont have access to that
+		visited.clear();				    																   // reset 
 		//-------------------------------------------------------------------------------------------------------------
 		Result res = minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root));
-		System.out.printf("\nbest result from depth %d: %f\n", 3, res.utility);
 		return res.state;
 		//-------------------------------------------------------------------------------------------------------------
 		//return greedy(root).state;
@@ -45,12 +42,14 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
-		// I addapted psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
+		// 						 I addapted psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 		ArrayList<State> childStates = getChildStates(root);
-		if (maximizingPlayer) {           
-			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
+		
+		if (maximizingPlayer) {    
+
+			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           	  // find the maximal score 
 			for (State child : childStates) {                             // recurse on child states from current state
 				if (wasVisited(child)) continue;
 				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
@@ -67,6 +66,7 @@ public class gmalone1 extends Bot {
 			return maximalState;
 
 		} else {
+
 			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
 			for (State child : childStates) {
 				if (wasVisited(child)) continue;
@@ -75,8 +75,8 @@ public class gmalone1 extends Bot {
 					minimalState.utility = result.utility;
 					minimalState.state = child;
 				}
-				beta = Math.min(beta, minimalState.utility);// lowest score the minimizing player is guaranteed so far 
-				if (beta <= alpha) {  // white had better option earlier on in the tree, will never go down this route
+				beta = Math.min(beta, minimalState.utility); // lowest score the minimizing player is guaranteed so far 
+				if (beta <= alpha) {   // white had better option earlier on in the tree, will never go down this route
 					break;
 				}
 			}
@@ -88,7 +88,7 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private boolean wasVisited(State state){ // helper method for minimax above
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.visited.contains(state)){ 														  // this has never run
+		if (this.visited.contains(state)){ 														// this has never run!!
 			System.out.println("just saved you some time");
 			return true;
 		} 
@@ -105,15 +105,15 @@ public class gmalone1 extends Bot {
 	// 	State optimumState = null;
 	// 	double optimumUtility = 0;
 
-	// 	for (State c : childStates) {													    // iterate the child states
-	// 		Result r = evaluateState(c);													    // result of evaluation
+	// 	for (State c : childStates) {													     // iterate the child states
+	// 		Result r = evaluateState(c);													     // result of evaluation
 	// 		if (playerIsWhite(root) 
-	// 			&& r.utility > optimumUtilityWhite){				   // looking to maximize score (white perspective)
+	// 			&& r.utility > optimumUtilityWhite){				    // looking to maximize score (white perspective)
 	// 			optimumUtilityWhite = r.utility;	
 	// 			optimumState = r.state;
 	// 		}
 	// 		if (playerIsBlack(root) 
-	// 			&& r.utility < optimumUtilityBlack){			        // looking to minimze score (black perspective)
+	// 			&& r.utility < optimumUtilityBlack){			         // looking to minimze score (black perspective)
 	// 			optimumUtilityBlack = r.utility;
 	// 			optimumState = r.state;
 	// 		}
@@ -124,7 +124,7 @@ public class gmalone1 extends Bot {
 	// 	} else {
 	// 		optimumUtility = optimumUtilityBlack;
 	// 	}	
-	// 															  // if nothing stands out, just pick a random move
+	// 															      // if nothing stands out, just pick a random move
 	// 	if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
 	// 	return new Result(optimumState, optimumUtility);
 	// }
@@ -163,8 +163,8 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private double materialValueForPlayer(State root){
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");     // piece and how many
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  // piece and how many
+		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");                // piece and how many
+		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  		      // piece and how many
 		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
 		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
 		boolean endGame = isEndGame(root.board);
@@ -189,9 +189,8 @@ public class gmalone1 extends Bot {
 	private boolean isEndGame(Board board){
 		HashMap<String, Integer> pieces = new HashMap<>();						   		   // track pieces on the board 
 		for (String p : this.chessPieces) pieces.put(p,0); 			         
-		Iterator<Piece> piece_iterator = board.iterator();	  						   // init map with values set to 0
-		// to determine material value for game phase calc all pieces except for pawns and kings
-		while(piece_iterator.hasNext())
+		Iterator<Piece> piece_iterator = board.iterator();	  						   
+		while(piece_iterator.hasNext())    // material value for game phase: calc all pieces except for pawns and kings
 		{
 			Piece curPeice = piece_iterator.next();
 			if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
@@ -321,8 +320,8 @@ public class gmalone1 extends Bot {
 	private ArrayList<State> getChildStates(State root){ 						       // GET NEXT POSSIBLE GAME STATES
 		//-------------------------------------------------------------------------------------------------------------
 		ArrayList<State> children = new ArrayList<>();	     // This list will hold all the children nodes of the root.
-		Iterator<State> iterator = root.next().iterator();        // Generate all children nodes of the root - all the
-		while(!root.searchLimitReached() && iterator.hasNext()) {// possible next states of the game and do not exceed
+		Iterator<State> iterator = root.next().iterator();         // Generate all children nodes of the root - all the
+		while(!root.searchLimitReached() && iterator.hasNext()) { // possible next states of the game and do not exceed
 			State nexState = iterator.next(); 
 			children.add(nexState); 								   			
 		}	
@@ -418,7 +417,7 @@ public class gmalone1 extends Bot {
 		}
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	// GAME BOARDS 									 // https://www.chessprogramming.org/Simplified_Evaluation_Function
+	// GAME BOARDS 	        // table values provided by https://www.chessprogramming.org/Simplified_Evaluation_Function
 	//-----------------------------------------------------------------------------------------------------------------
 	private double[][] PAWN_TABLE = {
 		{  0,  0,  0,  0,  0,  0,  0,  0},
@@ -441,7 +440,6 @@ public class gmalone1 extends Bot {
 		{  0,  0,  0,  0,  0,  0,  0,  0}
 	};
 	private double[][] ROOK_TABLE = {
-		// a   b   c   d   e   f   g   h
 		{  0,  0,  0,  5,  5,  0,  0,  0},
 		{ -5,  0,  0,  0,  0,  0,  0, -5},
 		{ -5,  0,  0,  0,  0,  0,  0, -5},
