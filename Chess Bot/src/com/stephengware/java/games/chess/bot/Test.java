@@ -27,9 +27,9 @@ public class Test {
 		Piece.load();
 		Bot[] bots = new Bot[]{
 				// new Human(),
-				// new RandomBot(),
 				new gmalone2(),
 				// new gmalone1(),
+				// new RandomBot(),
 				// new GreedyBot(),
 				// new NoviceBot(),
 				// new BeginnerBot(),

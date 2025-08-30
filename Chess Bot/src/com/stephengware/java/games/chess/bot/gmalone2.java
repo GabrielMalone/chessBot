@@ -7,7 +7,6 @@ package com.stephengware.java.games.chess.bot;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.HashSet;
 
 import com.stephengware.java.games.chess.state.*;
@@ -17,7 +16,6 @@ import com.stephengware.java.games.chess.state.*;
 public class gmalone2 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private double MAX_MATERIAL_VAL = 8000.0; 
-	Random random = new Random();
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
@@ -35,14 +33,12 @@ public class gmalone2 extends Bot {
 		if (moves == 0) initPieceValues();	         
 		if (this.moves ++ < 3 && playerIsWhite(root)) return scotchOpening(root, moves);   														
 		//-------------------------------------------------------------------------------------------------------------
-		Result res = minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root));
+		Result res = minimaxABpruning(root,4,Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root));
 		if (res.state.over) { 																		// reset each game 
 			moves = 0; 
 			visited.clear();	
 		}
 		return res.state;
-		//-------------------------------------------------------------------------------------------------------------
-		//return greedy(root).state;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
@@ -100,39 +96,6 @@ public class gmalone2 extends Bot {
 		this.visited.add(state);
 		return false;
 	}
-
-	// //---------------------------------------------------------------------------------------------------------------
-	// private Result greedy(State root){ 															// Greedy bot method
-	// 	//--------------------------------------------------------------------------------------------------------------
-	// 	ArrayList<State> childStates = getChildStates(root);
-	// 	double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
-	// 	double optimumUtilityBlack = Double.POSITIVE_INFINITY;
-	// 	State optimumState = null;
-	// 	double optimumUtility = 0;
-
-	// 	for (State c : childStates) {													     // iterate the child states
-	// 		Result r = evaluateState(c);													     // result of evaluation
-	// 		if (playerIsWhite(root) 
-	// 			&& r.utility > optimumUtilityWhite){				    // looking to maximize score (white perspective)
-	// 			optimumUtilityWhite = r.utility;	
-	// 			optimumState = r.state;
-	// 		}
-	// 		if (playerIsBlack(root) 
-	// 			&& r.utility < optimumUtilityBlack){			         // looking to minimze score (black perspective)
-	// 			optimumUtilityBlack = r.utility;
-	// 			optimumState = r.state;
-	// 		}
-	// 	} 				
-
-	// 	if (playerIsWhite(root)) {
-	// 		optimumUtility = optimumUtilityWhite; 					
-	// 	} else {
-	// 		optimumUtility = optimumUtilityBlack;
-	// 	}	
-	// 															      // if nothing stands out, just pick a random move
-	// 	if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
-	// 	return new Result(optimumState, optimumUtility);
-	// }
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
@@ -157,12 +120,6 @@ public class gmalone2 extends Bot {
 			else 				  utilityScore += 1000;	 
 			return new Result(root, utilityScore); 							   
 		}
-		// if (isCheck(root) && playerIsWhite(root)){									// black has put white in check
-		// 	utilityScore -= 15;									// this just ends up making my player make stupid moves
-		// }
-		// if (isCheck(root) && playerIsBlack(root)){									// white has put black in check
-		// 	utilityScore += 15;
-		// }
 		return new Result(root, utilityScore);                   
 	}
 	//-----------------------------------------------------------------------------------------------------------------
@@ -391,9 +348,6 @@ public class gmalone2 extends Bot {
 	private boolean isStaleMate(State root){
 		return root.over && !root.check;
 	}
-	// private boolean isCheck(State root){
-	// 	return root.check && !root.over;
-	// }
 	private boolean playerIsWhite(State root){
 		return root.player.name().equals("WHITE");
 	}
