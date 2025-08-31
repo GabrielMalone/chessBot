@@ -5,9 +5,9 @@
 package com.stephengware.java.games.chess.bot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.HashSet;
 
 import com.stephengware.java.games.chess.state.*;
@@ -16,11 +16,13 @@ import com.stephengware.java.games.chess.state.*;
 //---------------------------------------------------------------------------------------------------------------------
 public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
-	private double MAX_MATERIAL_VAL = 8000.0; 
-	Random random = new Random();
+
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
 	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
+    private double MAX_MATERIAL_VAL = 8000.0; 
+	int moves = 0;
+    boolean searchLimitReached = false;
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone1() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
@@ -31,31 +33,37 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		initPieceValues();	              // ideally this would be at the start game level but dont have access to that
-		visited.clear();				    																   // reset 
-		//-------------------------------------------------------------------------------------------------------------
-		Result res = minimaxABpruning(root, 4, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, playerIsWhite(root));
-		return res.state;
-		//-------------------------------------------------------------------------------------------------------------
-		//return greedy(root).state;
+		if (this.moves ++ == 0) initPieceValues();
+        this.searchLimitReached = false;	     						
+		State res = minimaxABpruning(root,chooseDepth(root),Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root)).state; 
+		if (res.over) { 																		    // reset each game 
+			this.moves = 0; 
+			this.visited.clear();	
+		}
+		return res;
 	}
+
+
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
 		// 						 I addapted psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
-		ArrayList<State> childStates = getChildStates(root);
-		
-		if (maximizingPlayer) {    
 
-			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           	  // find the maximal score 
-			for (State child : childStates) {                             // recurse on child states from current state
+		ArrayList<State> childStates = getChildStates(root);
+		ArrayList<Result> childStateResults = new ArrayList<>();
+		for (State c : childStates) childStateResults.add(evaluateState(c));
+
+		if (maximizingPlayer) {    
+			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
+			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
+			for (Result child : childStateResults) {                      // recurse on child states from current state
 				if (wasVisited(child)) continue;
-				Result result = minimaxABpruning(child, depth - 1, alpha, beta, false);
+				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, false);
 				if (result.utility > maximalState.utility) { 
 					maximalState.utility = result.utility;
-					maximalState.state = child;  		 // need to set to child in the loop and not the returned state
+					maximalState.state = child.state;  	 // need to set to child in the loop and not the returned state
 				}									 // returned state will have invalid moves since deeper in the tree
 				alpha = Math.max(alpha, maximalState.utility);  // highest score maximizing player is guaranteed so far
 				if (beta <= alpha) {       // don't explore any other paths since black wont allow us to pick this path
@@ -66,14 +74,15 @@ public class gmalone1 extends Bot {
 			return maximalState;
 
 		} else {
-
+			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
+			Collections.reverse(childStateResults); 						  // reverse for Black (lower scores first)
 			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
-			for (State child : childStates) {
+			for (Result child : childStateResults) {
 				if (wasVisited(child)) continue;
-				Result result = minimaxABpruning(child, depth - 1, alpha, beta, true);
+				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, true);
 				if (result.utility < minimalState.utility) {
 					minimalState.utility = result.utility;
-					minimalState.state = child;
+					minimalState.state = child.state;
 				}
 				beta = Math.min(beta, minimalState.utility); // lowest score the minimizing player is guaranteed so far 
 				if (beta <= alpha) {   // white had better option earlier on in the tree, will never go down this route
@@ -86,48 +95,15 @@ public class gmalone1 extends Bot {
 
 
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean wasVisited(State state){ // helper method for minimax above
+	private boolean wasVisited(Result res){ // helper method for minimax above
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.visited.contains(state)){ 														// this has never run!!
+		if (this.visited.contains(res.state)){ 														// this has never run!!
 			System.out.println("just saved you some time");
 			return true;
 		} 
-		this.visited.add(state);
+		this.visited.add(res.state);
 		return false;
 	}
-
-	// //---------------------------------------------------------------------------------------------------------------
-	// private Result greedy(State root){ 															// Greedy bot method
-	// 	//--------------------------------------------------------------------------------------------------------------
-	// 	ArrayList<State> childStates = getChildStates(root);
-	// 	double optimumUtilityWhite = Double.NEGATIVE_INFINITY;
-	// 	double optimumUtilityBlack = Double.POSITIVE_INFINITY;
-	// 	State optimumState = null;
-	// 	double optimumUtility = 0;
-
-	// 	for (State c : childStates) {													     // iterate the child states
-	// 		Result r = evaluateState(c);													     // result of evaluation
-	// 		if (playerIsWhite(root) 
-	// 			&& r.utility > optimumUtilityWhite){				    // looking to maximize score (white perspective)
-	// 			optimumUtilityWhite = r.utility;	
-	// 			optimumState = r.state;
-	// 		}
-	// 		if (playerIsBlack(root) 
-	// 			&& r.utility < optimumUtilityBlack){			         // looking to minimze score (black perspective)
-	// 			optimumUtilityBlack = r.utility;
-	// 			optimumState = r.state;
-	// 		}
-	// 	} 				
-
-	// 	if (playerIsWhite(root)) {
-	// 		optimumUtility = optimumUtilityWhite; 					
-	// 	} else {
-	// 		optimumUtility = optimumUtilityBlack;
-	// 	}	
-	// 															      // if nothing stands out, just pick a random move
-	// 	if (optimumUtility == 0) optimumState = childStates.get(random.nextInt(childStates.size())); 
-	// 	return new Result(optimumState, optimumUtility);
-	// }
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {
 		//-------------------------------------------------------------------------------------------------------------
@@ -152,55 +128,33 @@ public class gmalone1 extends Bot {
 			else 				  utilityScore += 1000;	 
 			return new Result(root, utilityScore); 							   
 		}
-		// if (isCheck(root) && playerIsWhite(root)){									// black has put white in check
-		// 	utilityScore -= 15;									// this just ends up making my player make stupid moves
-		// }
-		// if (isCheck(root) && playerIsBlack(root)){									// white has put black in check
-		// 	utilityScore += 15;
-		// }
 		return new Result(root, utilityScore);                   
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private double materialValueForPlayer(State root){
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");                // piece and how many
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  		      // piece and how many
-		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
-		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
+		ArrayList<Piece> blackPiecesObjects = getPieceOjbects(root, "BLACK");
+		ArrayList<Piece> whitePiecesObjects = getPieceOjbects(root, "WHITE");
+		double whiteMaterialValue = evaluateValueOfPieces(getPieces(root.board, "WHITE"));				
+		double blackMaterialvalue = evaluateValueOfPieces(getPieces(root.board, "BLACK"));			
 		boolean endGame = isEndGame(root.board);
 
-		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += queenPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += knightPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += bishopPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += kingPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += pawnPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += rookPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += queenPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += knightPositionModifier(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += bishopPositionModifier(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += kingPositionModifier	(whitePiecesObjects, "WHITE", endGame);
 
-		blackMaterialvalue += pawnPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += rookPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += queenPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += knightPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += bishopPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += kingPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += pawnPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += rookPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += queenPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += knightPositionModifier(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += bishopPositionModifier(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += kingPositionModifier	(blackPiecesObjects, "BLACK", endGame);
 
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
-	//-----------------------------------------------------------------------------------------------------------------
-	private boolean isEndGame(Board board){
-		HashMap<String, Integer> pieces = new HashMap<>();						   		   // track pieces on the board 
-		for (String p : this.chessPieces) pieces.put(p,0); 			         
-		Iterator<Piece> piece_iterator = board.iterator();	  						   
-		while(piece_iterator.hasNext())    // material value for game phase: calc all pieces except for pawns and kings
-		{
-			Piece curPeice = piece_iterator.next();
-			if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
-			if (isRook(curPeice)) 	pieces.put("Rook", 	pieces.get("Rook")   + 1);
-			if (isBishop(curPeice)) pieces.put("Bishop",pieces.get("Bishop") + 1);
-			if (isQueen(curPeice)) 	pieces.put("Queen", pieces.get("Queen")  + 1);
-		}
-		return evaluateValueOfPieces(pieces) <= (MAX_MATERIAL_VAL * 0.7);
-	}
-
 	//-----------------------------------------------------------------------------------------------------------------
 	private double pawnPositionModifier(ArrayList<Piece> pieces, String player, boolean endGame){
 		//-------------------------------------------------------------------------------------------------------------
@@ -323,7 +277,12 @@ public class gmalone1 extends Bot {
 		Iterator<State> iterator = root.next().iterator();         // Generate all children nodes of the root - all the
 		while(!root.searchLimitReached() && iterator.hasNext()) { // possible next states of the game and do not exceed
 			State nexState = iterator.next(); 
-			children.add(nexState); 								   			
+			children.add(nexState); 		
+            if (root.searchLimitReached())
+            {
+                this.searchLimitReached = true;
+                System.out.println("search limit reached!");
+            }						   			
 		}	
 		return children; 		
 	}
@@ -351,6 +310,22 @@ public class gmalone1 extends Bot {
 		}
 		return pieces;
 	}
+    //-----------------------------------------------------------------------------------------------------------------
+    HashMap<String, Integer> phaseEvalPieces (Board board){
+        //-------------------------------------------------------------------------------------------------------------
+        HashMap<String, Integer> pieces = new HashMap<>();						   		   // track pieces on the board 
+		for (String p : this.chessPieces) pieces.put(p,0); 			         
+		Iterator<Piece> piece_iterator = board.iterator();	  						   
+		while(piece_iterator.hasNext())    // material value for game phase: calc all pieces except for pawns and kings
+		{
+			Piece curPeice = piece_iterator.next();
+			if (isKnight(curPeice)) pieces.put("Knight",pieces.get("Knight") + 1);
+			if (isRook(curPeice)) 	pieces.put("Rook", 	pieces.get("Rook")   + 1);
+			if (isBishop(curPeice)) pieces.put("Bishop",pieces.get("Bishop") + 1);
+			if (isQueen(curPeice)) 	pieces.put("Queen", pieces.get("Queen")  + 1);
+		}
+        return pieces;
+    }
 	//-----------------------------------------------------------------------------------------------------------------
 	private double evaluateValueOfPieces(HashMap<String, Integer> Peices){
 		//-------------------------------------------------------------------------------------------------------------
@@ -386,14 +361,15 @@ public class gmalone1 extends Bot {
 	private boolean isStaleMate(State root){
 		return root.over && !root.check;
 	}
-	// private boolean isCheck(State root){
-	// 	return root.check && !root.over;
-	// }
 	private boolean playerIsWhite(State root){
 		return root.player.name().equals("WHITE");
 	}
 	private boolean playerIsBlack(State root){
 		return root.player.name().equals("BLACK");
+	}
+    //-----------------------------------------------------------------------------------------------------------------
+    private boolean isEndGame(Board board){
+		return evaluateValueOfPieces(phaseEvalPieces(board)) <= (MAX_MATERIAL_VAL * 0.7);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
@@ -406,7 +382,7 @@ public class gmalone1 extends Bot {
 		this.pieceValues.put("King", 0);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private static final class Result { 						  // so we can associate a state with its utility score
+	private static final class Result implements Comparable<Result> {   // can associate a state with its utility score
 		//-------------------------------------------------------------------------------------------------------------
 		public State state;
 		public double utility;
@@ -415,7 +391,23 @@ public class gmalone1 extends Bot {
 			this.state = state;
 			this.utility = utility;
 		}
+		@Override 																						 // for sorting
+		public int compareTo(Result other) {
+			return Double.compare(other.utility, this.utility); 								    // Descending order
+    	}
 	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private int chooseDepth(State root){ 		  // allow for deeper searches when there are fewer pieces on the board
+		//-------------------------------------------------------------------------------------------------------------
+		int depth = 4;
+		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() < 24) depth = 5;
+		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() < 10) depth = 6;
+		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() <  7) depth = 7;
+		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() <  4) depth = 8;
+		System.out.printf("\ndepth at %d\n", depth);
+		return depth;
+	}
+
 	//-----------------------------------------------------------------------------------------------------------------
 	// GAME BOARDS 	        // table values provided by https://www.chessprogramming.org/Simplified_Evaluation_Function
 	//-----------------------------------------------------------------------------------------------------------------
@@ -431,7 +423,7 @@ public class gmalone1 extends Bot {
 	};
 	private double[][] PAWN_ENDGAME_TABLE ={
 		{  0,  5, 10, 15, 15, 10,  5,  0},
-		{ 10, 15, 20, 25, 25, 20, 15, 10},
+		{100,150,200,250,250,200,150,100},
 		{  5, 10, 15, 30, 30, 15, 10,  5},
 		{  0,  5, 15, 25, 25, 15,  5,  0},
 		{  0,  0, 10, 20, 20, 10,  0,  0},

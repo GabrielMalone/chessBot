@@ -30,16 +30,19 @@ public class gmalone2 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		if (moves == 0) initPieceValues();	         
-		if (this.moves ++ < 3 && playerIsWhite(root)) return scotchOpening(root, moves);   														
+		if (this.moves ++  == 0) initPieceValues();	         													
 		//-------------------------------------------------------------------------------------------------------------
-		Result res = minimaxABpruning(root,4,Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root));
+		Result res = minimaxABpruning(root,4,Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root)); 
 		if (res.state.over) { 																		// reset each game 
-			moves = 0; 
-			visited.clear();	
+			this.moves = 0; 
+			this.visited.clear();	
 		}
 		return res.state;
 	}
+
+
+	
+
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
@@ -125,25 +128,25 @@ public class gmalone2 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private double materialValueForPlayer(State root){
 		//-------------------------------------------------------------------------------------------------------------
-		HashMap<String, Integer> curWhitePeices  = getPieces(root.board, "WHITE");                // piece and how many
-		HashMap<String, Integer> curBlackPeices  = getPieces(root.board, "BLACK");	  		      // piece and how many
-		double whiteMaterialValue = evaluateValueOfPieces(curWhitePeices);					 // value of white's pieces
-		double blackMaterialvalue = evaluateValueOfPieces(curBlackPeices);					 // value of black's pieces
+		ArrayList<Piece> blackPiecesObjects = getPieceOjbects(root, "BLACK");
+		ArrayList<Piece> whitePiecesObjects = getPieceOjbects(root, "WHITE");
+		double whiteMaterialValue = evaluateValueOfPieces(getPieces(root.board, "WHITE"));				
+		double blackMaterialvalue = evaluateValueOfPieces(getPieces(root.board, "BLACK"));			
 		boolean endGame = isEndGame(root.board);
 
-		whiteMaterialValue += pawnPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += rookPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += queenPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += knightPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += bishopPositionModifier(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
-		whiteMaterialValue += kingPositionModifier	(getPieceOjbects(root, "WHITE"), "WHITE", endGame);
+		whiteMaterialValue += pawnPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += rookPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += queenPositionModifier	(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += knightPositionModifier(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += bishopPositionModifier(whitePiecesObjects, "WHITE", endGame);
+		whiteMaterialValue += kingPositionModifier	(whitePiecesObjects, "WHITE", endGame);
 
-		blackMaterialvalue += pawnPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += rookPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += queenPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += knightPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += bishopPositionModifier(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
-		blackMaterialvalue += kingPositionModifier	(getPieceOjbects(root, "BLACK"), "BLACK", endGame);
+		blackMaterialvalue += pawnPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += rookPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += queenPositionModifier	(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += knightPositionModifier(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += bishopPositionModifier(blackPiecesObjects, "BLACK", endGame);
+		blackMaterialvalue += kingPositionModifier	(blackPiecesObjects, "BLACK", endGame);
 
 		return whiteMaterialValue - blackMaterialvalue; 					  // utility score from white's perspective
 	}
@@ -363,21 +366,6 @@ public class gmalone2 extends Bot {
 		this.pieceValues.put("Bishop", 330);
 		this.pieceValues.put("Queen", 900);
 		this.pieceValues.put("King", 0);
-	}
-	//-----------------------------------------------------------------------------------------------------------------
-	private State scotchOpening(State root, int move){        // see if some known good opening moves improves anything
-		//-------------------------------------------------------------------------------------------------------------
-		ArrayList<State>childStates = getChildStates(root);
-		if (move == 1){	
-			for (State c:childStates) if (c.board.getPieceAt(4,3)!=null && isPawn(c.board.getPieceAt(4,3)))   return c;
-		}
-		if (move == 2){
-			for (State c:childStates) if (c.board.getPieceAt(5,2)!=null && isKnight(c.board.getPieceAt(5,2))) return c;
-		}
-		if (move == 3){
-			for (State c:childStates) if (c.board.getPieceAt(3,3)!=null && isPawn(c.board.getPieceAt(3,3)))   return c;
-		}
-		return null;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private static final class Result { 						  // so we can associate a state with its utility score
