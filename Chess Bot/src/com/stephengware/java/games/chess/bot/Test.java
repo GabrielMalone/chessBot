@@ -27,16 +27,17 @@ public class Test {
 		Piece.load();
 		Bot[] bots = new Bot[]{
 				// new Human(),
-				// new gmalone2(),
+		
 				// new RandomBot(),
 				// new GreedyBot(),
 				// new NoviceBot(),
 				// new BeginnerBot(),
-				new gmalone1(),
+				// new gmalone1(),
+				new gmalone2(),
 				new IntermediateBot(),
 		};
 		Tournament tournament = new Tournament(2, bots);
 		tournament.play();
 		ChessDisplay.getInstance().console.append(tournament.toString());
 	}
-} 
+}  

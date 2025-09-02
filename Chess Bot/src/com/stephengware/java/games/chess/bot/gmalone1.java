@@ -3,64 +3,67 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 package com.stephengware.java.games.chess.bot;
+import com.stephengware.java.games.chess.state.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.HashSet;
-
-import com.stephengware.java.games.chess.state.*;
-
 
 //---------------------------------------------------------------------------------------------------------------------
 public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
-
-	private HashMap<String, Integer> pieceValues = new HashMap<>();
-	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
-	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
-    private double MAX_MATERIAL_VAL = 8000.0; 
-	int moves = 0;
-    boolean searchLimitReached = false;
+	private HashMap<String, Integer> pieceValues 	= new HashMap<>();		
+	private String[] chessPieces 					= {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
+    private double MAX_MATERIAL_VAL 				= 8000.0; 
+	double alpha 									= Double.NEGATIVE_INFINITY;
+	double beta 									= Double.POSITIVE_INFINITY;
+	int moves 										= 0;
+    boolean searchLimitReached	 					= false;
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone1() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
-		super("gmalone1");    																			 // name my bot
+		super("gmalone1");    		
+		initPieceValues();																	
 	}
 
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.moves ++ == 0) initPieceValues();
-        this.searchLimitReached = false;	     						
-		State res = minimaxABpruning(root,chooseDepth(root),Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root)).state; 
-		if (res.over) { 																		    // reset each game 
-			this.moves = 0; 
-			this.visited.clear();	
+        this.searchLimitReached = false;	     													 // reset each move
+		return ID(root).state;																      	  // find best move
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private Result ID (State root) { // starting to implement iterative deepening, need to update the minimmax call tho
+		//-------------------------------------------------------------------------------------------------------------
+
+		Result bestResult = new Result(null, this.alpha);
+
+		for (int depth = 0 ; depth <= 8 ; depth ++)
+		{	
+			Result res = minimaxABpruning(root,depth,this.alpha,this.beta,playerIsWhite(root), bestResult);
+			System.out.printf("\ndepth: %d\n", depth);
+			if (searchLimitReached) break;
+			bestResult = res; 										 // only use result from last fully searched depth
 		}
-		return res;
+		return bestResult;
 	}
 
-
 	//-----------------------------------------------------------------------------------------------------------------
-	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
+	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer, Result prevBest){
 		//-------------------------------------------------------------------------------------------------------------
 		// 						 I addapted psuedocode provided by : https://www.youtube.com/watch?v=l-hh51ncgDI&t=189s
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 
-		ArrayList<State> childStates = getChildStates(root);
-		ArrayList<Result> childStateResults = new ArrayList<>();
-		for (State c : childStates) childStateResults.add(evaluateState(c));
+		ArrayList<Result> childStates = getSortedChildStates(root, maximizingPlayer, prevBest);
 
 		if (maximizingPlayer) {    
-			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
+			
 			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
-			for (Result child : childStateResults) {                      // recurse on child states from current state
-				if (wasVisited(child)) continue;
-				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, false);
+			for (Result child : childStates) {                            // recurse on child states from current state				
+				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, false, prevBest);
 				if (result.utility > maximalState.utility) { 
 					maximalState.utility = result.utility;
 					maximalState.state = child.state;  	 // need to set to child in the loop and not the returned state
@@ -74,12 +77,10 @@ public class gmalone1 extends Bot {
 			return maximalState;
 
 		} else {
-			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
-			Collections.reverse(childStateResults); 						  // reverse for Black (lower scores first)
+
 			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
-			for (Result child : childStateResults) {
-				if (wasVisited(child)) continue;
-				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, true);
+			for (Result child : childStates) {
+				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, true, prevBest);
 				if (result.utility < minimalState.utility) {
 					minimalState.utility = result.utility;
 					minimalState.state = child.state;
@@ -95,13 +96,41 @@ public class gmalone1 extends Bot {
 
 
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean wasVisited(Result res){ // helper method for minimax above
+	private ArrayList<Result> getSortedChildStates(State root, boolean maximizingPlayer, Result prefResult){
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.visited.contains(res.state)){ 														// this has never run!!
-			System.out.println("just saved you some time");
-			return true;
-		} 
-		this.visited.add(res.state);
+
+		ArrayList<State> childStates = getChildStates(root);				// get all the states we can from this root
+		ArrayList<Result> childStateResults = new ArrayList<>();					   // evaluate all the child states
+		for (State c : childStates) childStateResults.add(evaluateState(c));	 	   // evaluate all the child states
+
+		Collections.sort(childStateResults); 		        // get child nodes in order of potentially best moves first
+		if (!maximizingPlayer) Collections.reverse(childStateResults); 		  // reverse for Black (lower scores first)
+		ArrayList<Result> copy = new ArrayList<>(); 	   // check to see if the preferred result has descendents here
+		for (Result r : childStateResults) copy.add(r);
+		ArrayList<Result> descendents = new ArrayList<>(); // check to see if the preferred result has descendents here
+		if (prefResult.state != null) {								     	   // if we have a preferred result already
+			for (Result r : copy) {                 	          // let's see if descendents from it are on this level
+				if (isDescendent(prefResult.state, r.state)) { // might lead to better pruning and allow for more depth
+					descendents.add(r);
+					childStateResults.remove(r);
+				}
+			}
+		}
+		Collections.sort(descendents);				 									  // this is probably redundant												
+		if (!maximizingPlayer) Collections.reverse(descendents);  
+		descendents.addAll(childStateResults);
+		return descendents;
+	}
+	//-----------------------------------------------------------------------------------------------------------------
+	private boolean isDescendent(State ancestor, State child){ 	       // see if a child is a desendent of another node 
+		//-------------------------------------------------------------------------------------------------------------
+		while (child != null)
+		{
+			if (child.previous!=null && child.previous.board.equals(ancestor.board)){
+				return true;
+			} 
+			child = child.previous;
+		}
 		return false;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
@@ -369,7 +398,7 @@ public class gmalone1 extends Bot {
 	}
     //-----------------------------------------------------------------------------------------------------------------
     private boolean isEndGame(Board board){
-		return evaluateValueOfPieces(phaseEvalPieces(board)) <= (MAX_MATERIAL_VAL * 0.7);
+		return evaluateValueOfPieces(phaseEvalPieces(board)) <= (MAX_MATERIAL_VAL * 0.4);  // 0.4 beats recommended 0.7
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
@@ -397,21 +426,9 @@ public class gmalone1 extends Bot {
     	}
 	}
 	//-----------------------------------------------------------------------------------------------------------------
-	private int chooseDepth(State root){ 		  // allow for deeper searches when there are fewer pieces on the board
-		//-------------------------------------------------------------------------------------------------------------
-		int depth = 4;
-		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() < 24) depth = 5;
-		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() < 10) depth = 6;
-		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() <  7) depth = 7;
-		if (getPieceOjbects(root, "WHITE").size() + getPieceOjbects(root, "BLACK").size() <  4) depth = 8;
-		System.out.printf("\ndepth at %d\n", depth);
-		return depth;
-	}
-
-	//-----------------------------------------------------------------------------------------------------------------
 	// GAME BOARDS 	        // table values provided by https://www.chessprogramming.org/Simplified_Evaluation_Function
 	//-----------------------------------------------------------------------------------------------------------------
-	private double[][] PAWN_TABLE = {
+		private double[][] PAWN_TABLE = {
 		{  0,  0,  0,  0,  0,  0,  0,  0},
 		{ 50, 50, 50, 50, 50, 50, 50, 50},   
 		{ 10, 10, 20, 35, 35, 20, 10, 10},
@@ -423,7 +440,7 @@ public class gmalone1 extends Bot {
 	};
 	private double[][] PAWN_ENDGAME_TABLE ={
 		{  0,  5, 10, 15, 15, 10,  5,  0},
-		{100,150,200,250,250,200,150,100},
+		{ 10, 15, 20, 25, 25, 20, 10, 10},
 		{  5, 10, 15, 30, 30, 15, 10,  5},
 		{  0,  5, 15, 25, 25, 15,  5,  0},
 		{  0,  0, 10, 20, 20, 10,  0,  0},
@@ -533,5 +550,3 @@ public class gmalone1 extends Bot {
 	};
 
 }
-
-
