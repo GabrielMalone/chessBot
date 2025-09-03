@@ -32,9 +32,9 @@ public class Test {
 				// new GreedyBot(),
 				// new NoviceBot(),
 				// new BeginnerBot(),
-				// new gmalone1(),
 				new gmalone2(),
-				new IntermediateBot(),
+				new gmalone1(),
+				// new IntermediateBot(),
 		};
 		Tournament tournament = new Tournament(2, bots);
 		tournament.play();

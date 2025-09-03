@@ -8,10 +8,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.HashSet;
 
 import com.stephengware.java.games.chess.state.*;
-
 
 //---------------------------------------------------------------------------------------------------------------------
 public class gmalone2 extends Bot {
@@ -19,30 +17,27 @@ public class gmalone2 extends Bot {
 
 	private HashMap<String, Integer> pieceValues = new HashMap<>();
 	private String[] chessPieces = {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
-	private HashSet<State> visited = new HashSet<>();						      // track visited states during a game
     private double MAX_MATERIAL_VAL = 8000.0; 
 	int moves = 0;
     boolean searchLimitReached = false;
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone2() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
-		super("gmalone2");    																			 // name my bot
+		super("gmalone2");    	
+		initPieceValues();																		 // name my bot
 	}
 
 	@Override				
 	//-----------------------------------------------------------------------------------------------------------------
 	protected State chooseMove(State root) {														     // MAIN METHOD 
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.moves ++ == 0) initPieceValues();
         this.searchLimitReached = false;	     						
-		State res = minimaxABpruning(root,chooseDepth(root),Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,playerIsWhite(root)).state; 
-		if (res.over) { 																		    // reset each game 
-			this.moves = 0; 
-			this.visited.clear();	
-		}
-		return res;
+		return minimaxABpruning(root,
+								chooseDepth(root),
+								Double.NEGATIVE_INFINITY,
+								Double.POSITIVE_INFINITY,
+								playerIsWhite(root)).state; 
 	}
-
 
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer){
@@ -51,15 +46,11 @@ public class gmalone2 extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 
-		ArrayList<State> childStates = getChildStates(root);
-		ArrayList<Result> childStateResults = new ArrayList<>();
-		for (State c : childStates) childStateResults.add(evaluateState(c));
+		ArrayList<Result> childStateResults = getSortedChildStates(root, maximizingPlayer);
 
 		if (maximizingPlayer) {    
-			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
 			Result maximalState = new Result(null, Double.NEGATIVE_INFINITY);           // find the maximal score 
 			for (Result child : childStateResults) {                      // recurse on child states from current state
-				if (wasVisited(child)) continue;
 				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, false);
 				if (result.utility > maximalState.utility) { 
 					maximalState.utility = result.utility;
@@ -74,11 +65,8 @@ public class gmalone2 extends Bot {
 			return maximalState;
 
 		} else {
-			Collections.sort(childStateResults); 		 // get children nodes in order of potentially best moves first
-			Collections.reverse(childStateResults); 						  // reverse for Black (lower scores first)
 			Result minimalState = new Result(null, Double.POSITIVE_INFINITY);
 			for (Result child : childStateResults) {
-				if (wasVisited(child)) continue;
 				Result result = minimaxABpruning(child.state, depth - 1, alpha, beta, true);
 				if (result.utility < minimalState.utility) {
 					minimalState.utility = result.utility;
@@ -92,17 +80,15 @@ public class gmalone2 extends Bot {
 			return minimalState;
 		}
 	}
-
-
 	//-----------------------------------------------------------------------------------------------------------------
-	private boolean wasVisited(Result res){ // helper method for minimax above
+	private ArrayList<Result> getSortedChildStates(State root, boolean maximizingPlayer){
 		//-------------------------------------------------------------------------------------------------------------
-		if (this.visited.contains(res.state)){ 														// this has never run!!
-			System.out.println("just saved you some time");
-			return true;
-		} 
-		this.visited.add(res.state);
-		return false;
+		ArrayList<State> childStates = getChildStates(root);				// get all the states we can from this root
+		ArrayList<Result> childStateResults = new ArrayList<>();					   // evaluate all the child states
+		for (State c : childStates) childStateResults.add(evaluateState(c));	 	   // evaluate all the child states
+		Collections.sort(childStateResults); 		        // get child nodes in order of potentially best moves first
+		if (!maximizingPlayer) Collections.reverse(childStateResults); 		  // reverse for Black (lower scores first)
+		return childStateResults;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result evaluateState(State root) {

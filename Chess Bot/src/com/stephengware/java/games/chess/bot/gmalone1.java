@@ -16,9 +16,6 @@ public class gmalone1 extends Bot {
 	private HashMap<String, Integer> pieceValues 	= new HashMap<>();		
 	private String[] chessPieces 					= {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
     private double MAX_MATERIAL_VAL 				= 8000.0; 
-	double alpha 									= Double.NEGATIVE_INFINITY;
-	double beta 									= Double.POSITIVE_INFINITY;
-	int moves 										= 0;
     boolean searchLimitReached	 					= false;
 	//-----------------------------------------------------------------------------------------------------------------
 	public gmalone1() { // BOT CONSTRUCTOR
@@ -38,18 +35,29 @@ public class gmalone1 extends Bot {
 	private Result ID (State root) { // starting to implement iterative deepening, need to update the minimmax call tho
 		//-------------------------------------------------------------------------------------------------------------
 
-		Result bestResult = new Result(null, this.alpha);
+		double alpha = Double.NEGATIVE_INFINITY;
+		double beta  = Double.POSITIVE_INFINITY;
 
-		for (int depth = 0 ; depth <= 8 ; depth ++)
-		{	
-			Result res = minimaxABpruning(root,depth,this.alpha,this.beta,playerIsWhite(root), bestResult);
-			System.out.printf("\ndepth: %d\n", depth);
+		Result bestResult = new Result(null, alpha);
+
+		for (int depth = 0 ; depth <= 8 ; depth ++) {	
+
+			if (bestResult.state != null) {
+				double delta = Math.max(150, depth * 60);       // deeper you go, you might find more game ending moves 
+				alpha = bestResult.utility - delta; 					
+				beta  = bestResult.utility + delta; 
+				System.out.printf("\nalpha: %f beta: %f\n", alpha, beta);
+			}
+
+			Result res = minimaxABpruning(root,depth,alpha,beta,playerIsWhite(root),bestResult);
 			if (searchLimitReached) break;
+			System.out.printf("\ndepth: %d\n", depth);
 			bestResult = res; 										 // only use result from last fully searched depth
 		}
+
 		return bestResult;
 	}
-
+	
 	//-----------------------------------------------------------------------------------------------------------------
 	private Result minimaxABpruning(State root, int depth, double alpha, double beta, boolean maximizingPlayer, Result prevBest){
 		//-------------------------------------------------------------------------------------------------------------
@@ -57,7 +65,9 @@ public class gmalone1 extends Bot {
 		//-------------------------------------------------------------------------------------------------------------
 		if (depth == 0 || root.over) return evaluateState(root);             // base case , at a leaf or game has ended
 
-		ArrayList<Result> childStates = getSortedChildStates(root, maximizingPlayer, prevBest);
+		ArrayList<Result> childStates = getSortedChildStates(root, maximizingPlayer);
+
+		// if (depth == 0 && prevBest.state != null) childStates.add(0, prevBest);
 
 		if (maximizingPlayer) {    
 			
@@ -95,31 +105,40 @@ public class gmalone1 extends Bot {
 	}
 
 
-	//-----------------------------------------------------------------------------------------------------------------
-	private ArrayList<Result> getSortedChildStates(State root, boolean maximizingPlayer, Result prefResult){
-		//-------------------------------------------------------------------------------------------------------------
+	// //-----------------------------------------------------------------------------------------------------------------
+	// private ArrayList<Result> getSortedChildStates(State root, boolean maximizingPlayer, Result prefResult){
+	// 	//-------------------------------------------------------------------------------------------------------------
 
+	// 	ArrayList<State> childStates = getChildStates(root);				// get all the states we can from this root
+	// 	ArrayList<Result> childStateResults = new ArrayList<>();					   // evaluate all the child states
+	// 	for (State c : childStates) childStateResults.add(evaluateState(c));	 	   // evaluate all the child states
+	// 	Collections.sort(childStateResults); 		        // get child nodes in order of potentially best moves first
+	// 	if (!maximizingPlayer) Collections.reverse(childStateResults); 		  // reverse for Black (lower scores first)
+	// 	ArrayList<Result> copy = new ArrayList<>(); 	   // check to see if the preferred result has descendents here
+	// 	for (Result r : childStateResults) copy.add(r);
+	// 	ArrayList<Result> descendents = new ArrayList<>(); // check to see if the preferred result has descendents here
+	// 	if (prefResult.state != null) {								     	   // if we have a preferred result already
+	// 		for (Result r : copy) {                 	          // let's see if descendents from it are on this level
+	// 			if (isDescendent(prefResult.state, r.state)) { // might lead to better pruning and allow for more depth
+	// 				descendents.add(r);
+	// 				childStateResults.remove(r);
+	// 			}
+	// 		}
+	// 	}
+		
+	// 	for (Result r : childStateResults) descendents.add(r);
+	// 	return descendents;
+
+	// }
+	//-----------------------------------------------------------------------------------------------------------------
+	private ArrayList<Result> getSortedChildStates(State root, boolean maximizingPlayer){
+		//-------------------------------------------------------------------------------------------------------------
 		ArrayList<State> childStates = getChildStates(root);				// get all the states we can from this root
 		ArrayList<Result> childStateResults = new ArrayList<>();					   // evaluate all the child states
 		for (State c : childStates) childStateResults.add(evaluateState(c));	 	   // evaluate all the child states
-
 		Collections.sort(childStateResults); 		        // get child nodes in order of potentially best moves first
 		if (!maximizingPlayer) Collections.reverse(childStateResults); 		  // reverse for Black (lower scores first)
-		ArrayList<Result> copy = new ArrayList<>(); 	   // check to see if the preferred result has descendents here
-		for (Result r : childStateResults) copy.add(r);
-		ArrayList<Result> descendents = new ArrayList<>(); // check to see if the preferred result has descendents here
-		if (prefResult.state != null) {								     	   // if we have a preferred result already
-			for (Result r : copy) {                 	          // let's see if descendents from it are on this level
-				if (isDescendent(prefResult.state, r.state)) { // might lead to better pruning and allow for more depth
-					descendents.add(r);
-					childStateResults.remove(r);
-				}
-			}
-		}
-		Collections.sort(descendents);				 									  // this is probably redundant												
-		if (!maximizingPlayer) Collections.reverse(descendents);  
-		descendents.addAll(childStateResults);
-		return descendents;
+		return childStateResults;
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private boolean isDescendent(State ancestor, State child){ 	       // see if a child is a desendent of another node 
