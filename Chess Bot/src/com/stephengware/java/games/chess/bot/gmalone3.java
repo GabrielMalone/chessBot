@@ -11,16 +11,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 //---------------------------------------------------------------------------------------------------------------------
-public class gmalone1 extends Bot {
+public class gmalone3 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private HashMap<String, Integer> pieceValues 	= new HashMap<>();		
 	private String[] chessPieces 					= {"Pawn", "Rook", "Bishop", "Knight", "Queen", "King"};
     private double MAX_MATERIAL_VAL 				= 8000.0; 
     boolean searchLimitReached	 					= false;
 	//-----------------------------------------------------------------------------------------------------------------
-	public gmalone1() { // BOT CONSTRUCTOR
+	public gmalone3() { // BOT CONSTRUCTOR
 		//-------------------------------------------------------------------------------------------------------------
-		super("gmalone1");    		
+		super("gmalone3");    		
 		initPieceValues();																	
 	}
 
@@ -40,26 +40,14 @@ public class gmalone1 extends Bot {
 
 		Result bestResult = new Result(null, alpha);
 
-		for ( int depth = 0 ; depth <= 8 ; depth ++ ) {	
+		for (int depth = 0 ; depth <= 8 ; depth ++) {	
 
-			if (bestResult.state != null && playerIsWhite(root)) {
-				alpha = bestResult.utility - 25 * depth; 					
-				beta  = bestResult.utility + 25 * depth;
-				if ( bestResult.utility >= 900 ){
-					alpha 	= Double.NEGATIVE_INFINITY;  	  
-					beta 	= Double.POSITIVE_INFINITY;  							
-				}
-			} 
-
-			if (bestResult.state != null && playerIsBlack(root)) {
-				double delta = Math.max(150, depth * 60);     // deeper you go, you might find more game ending moves 
-				alpha = bestResult.utility - delta; 			        // so expand the search window a bit each depth		
+			if (bestResult.state != null) {
+				double delta = Math.max(150, depth * 60);   // deeper you go, you might find more game ending moves 
+				alpha = bestResult.utility - delta; 					
 				beta  = bestResult.utility + delta;
-				if ( (beta <= -900 || alpha <= -900) || (beta >= 900 || alpha >= 900) ) {
-		            alpha 	= Double.NEGATIVE_INFINITY;  		 // for some reason this makes the black player powerful
-					beta 	= Double.POSITIVE_INFINITY;  											// but not the white					
-				}
-			} 
+				System.out.printf("\nalpha: %f beta: %f\n", alpha, beta);
+			}
 
 			Result res = minimaxABpruning(root,depth,alpha,beta,playerIsWhite(root));
 			if (searchLimitReached) break;
@@ -393,12 +381,12 @@ public class gmalone1 extends Bot {
 	//-----------------------------------------------------------------------------------------------------------------
 	private void initPieceValues(){ 												   // set the values for each piece
 		//-------------------------------------------------------------------------------------------------------------
-		this.pieceValues.put("Pawn",   100);
+		this.pieceValues.put("Pawn", 100);
 		this.pieceValues.put("Knight", 320);
-		this.pieceValues.put("Rook",   500);
+		this.pieceValues.put("Rook", 500);
 		this.pieceValues.put("Bishop", 330);
-		this.pieceValues.put("Queen",  900);
-		this.pieceValues.put("King",     0);
+		this.pieceValues.put("Queen", 900);
+		this.pieceValues.put("King", 0);
 	}
 	//-----------------------------------------------------------------------------------------------------------------
 	private static final class Result implements Comparable<Result> {   // can associate a state with its utility score

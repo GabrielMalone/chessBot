@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Test",
+      "request": "launch",
+      "mainClass": "com.stephengware.java.games.chess.bot.Test",
+      "projectName": "Chess Bot"
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/gabrielmalone/Documents/personalprojects/interviewprepstuff",
+      "program": "/Users/gabrielmalone/Documents/personalprojects/interviewprepstuff/build/Debug/outDebug"
+    }
+  ]
+}
